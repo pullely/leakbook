@@ -46,7 +46,11 @@
         {
           "binding": "BILLING_WORKER",
           "service": "leakbook-billing-worker-stage"
-        }// @cycle-break:membership-worker->notifications-worker:LAogICAgICAgIHsKICAgICAgICAgICJiaW5kaW5nIjogIk5PVElGSUNBVElPTlNfV09SS0VSIiwKICAgICAgICAgICJzZXJ2aWNlIjogImxlYWtib29rLW5vdGlmaWNhdGlvbnMtd29ya2VyLXN0YWdlIgogICAgICAgIH0=
+        },
+        {
+          "binding": "NOTIFICATIONS_WORKER",
+          "service": "leakbook-notifications-worker-stage"
+        }
       ]
     },
     "prod": {
@@ -71,7 +75,11 @@
         {
           "binding": "BILLING_WORKER",
           "service": "leakbook-billing-worker-prod"
-        }// @cycle-break:membership-worker->notifications-worker:LAogICAgICAgIHsKICAgICAgICAgICJiaW5kaW5nIjogIk5PVElGSUNBVElPTlNfV09SS0VSIiwKICAgICAgICAgICJzZXJ2aWNlIjogImxlYWtib29rLW5vdGlmaWNhdGlvbnMtd29ya2VyLXByb2QiCiAgICAgICAgfQ==
+        },
+        {
+          "binding": "NOTIFICATIONS_WORKER",
+          "service": "leakbook-notifications-worker-prod"
+        }
       ]
     }
   }
