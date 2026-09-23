@@ -1,0 +1,10 @@
+{
+  "reponame": "leakbook",
+  "productname": "Leakbook",
+  "productdomain": "leakbook.app",
+  "subdomain": "nexo-7be",
+  "orunWorkspace": "ws_CBQK9BPH",
+  "githuborg": "pullely",
+  "epicSlug": "infra-baselining",
+  "domain": false
+}
