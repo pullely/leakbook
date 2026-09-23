@@ -49,7 +49,10 @@
         }
       ],
       "services": [
-        // @cycle-break:billing-worker->membership-worker:ewogICAgICAgICAgImJpbmRpbmciOiAiTUVNQkVSU0hJUF9XT1JLRVIiLAogICAgICAgICAgInNlcnZpY2UiOiAibGVha2Jvb2stbWVtYmVyc2hpcC13b3JrZXItc3RhZ2UiCiAgICAgICAgfSw=
+        {
+          "binding": "MEMBERSHIP_WORKER",
+          "service": "leakbook-membership-worker-stage"
+        },
         {
           "binding": "POLICY_WORKER",
           "service": "leakbook-policy-worker-stage"
@@ -73,7 +76,10 @@
         }
       ],
       "services": [
-        // @cycle-break:billing-worker->membership-worker:ewogICAgICAgICAgImJpbmRpbmciOiAiTUVNQkVSU0hJUF9XT1JLRVIiLAogICAgICAgICAgInNlcnZpY2UiOiAibGVha2Jvb2stbWVtYmVyc2hpcC13b3JrZXItcHJvZCIKICAgICAgICB9LA==
+        {
+          "binding": "MEMBERSHIP_WORKER",
+          "service": "leakbook-membership-worker-prod"
+        },
         {
           "binding": "POLICY_WORKER",
           "service": "leakbook-policy-worker-prod"
