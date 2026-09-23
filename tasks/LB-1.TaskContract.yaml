@@ -1,0 +1,13 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: LB-1
+spec:
+  goal: The Leakbook epic's five design documents are on main and attached to the epic in Orunbase.
+  affects:
+    - specs/epics/leakbook-refrigerant-log
+    - tasks
+  doneWhen:
+    - specs/epics/leakbook-refrigerant-log holds README.md, design.md, implementation-plan.md, risks-and-open-questions.md and IMPLEMENTATION-STATUS.md on main
+    - orun spec list --epic leakbook-refrigerant-log shows all five documents
+  gates: []
