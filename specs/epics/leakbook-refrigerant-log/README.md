@@ -35,7 +35,7 @@ repair, with the record exportable for an inspector.
 
 | Field | Value |
 |-------|-------|
-| Status | Draft |
+| Status | In progress — LB0 landed (#9); LB1 in review |
 | Cluster | **LB** (LB0–LB3) |
 | Owner(s) | `apps/leak-worker` (sites, appliances, QR labels, the service log, the leak-rate engine, the repair clock and its cron, PDF export) · `apps/api-edge` (the facade) · `packages/db` (migrations `200`–`220`, bounded context `leak`) · `packages/contracts` + `packages/sdk` (the wire) · `infra/terraform/cloudflare-r2` (the export bucket, LB3) · `apps/notifications-worker` (the reminder templates, LB3) · `apps/web-console-next` (the register and the phone pages) |
 | Builds on | `cirrus baseline-v12` — organizations as contractors, members as technicians and office staff, the policy engine for who may edit, magic-link sign-in for the phone pages, `notifications-worker` for email, the audit trail in `events-worker`, api-edge rate limiting |

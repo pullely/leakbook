@@ -19,6 +19,7 @@
 
 import { STORAGE_PREFIX } from "./app-config";
 import { SOLO_MODE } from "./solo-mode";
+import { takeReturnTo } from "./return-to";
 import { pickAccountBillingOrg } from "@/components/billing/account-org";
 
 const LAST_ORG_KEY = `${STORAGE_PREFIX}.last-org`;
@@ -87,6 +88,9 @@ interface PostAuthClient {
  * session context's client may not have it yet on this tick.
  */
 export async function resolvePostAuthDestination(client: PostAuthClient): Promise<string> {
+  // Leakbook: a sign-in that started on a scanned QR label returns to that label.
+  const returnTo = takeReturnTo();
+  if (returnTo) return returnTo;
   try {
     const { user } = await client.auth.getProfile();
     const serverSlug = user.lastOrgSlug ?? null;

@@ -298,6 +298,10 @@ export const NOTIFICATIONS_INTERNAL_ACTOR_VALUES = [
   // The public edge forwards end-user preference reads/updates over the
   // service binding with the subject pinned to the resolved session actor.
   "api-edge",
+  // Leakbook: leak-worker emails the repair-clock reminders and escalations
+  // (LB3). Added with the worker in LB1 so it is in place before the first
+  // send; without this entry notifications-worker refuses its calls with 403.
+  "leak-worker",
 ] as const;
 
 export type NotificationsInternalActor =

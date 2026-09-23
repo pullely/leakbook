@@ -76,4 +76,4 @@ spec:
     surface: billing
     runtime: cloudflare
 # ci: re-trigger deploy (batch A — runner-starvation recovery 20260622T115650Z)
-# orun: redeploy 04-workers-restore 20260923T161645Z
+# orun: redeploy LB1 — packages/db (trap-16 D1 fix, leak context), packages/policy-engine (leak.* actions), packages/contracts (leak-worker notifications caller)
