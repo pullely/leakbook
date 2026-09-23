@@ -57,4 +57,4 @@ spec:
               triggerRef: github-push-main
 # ci: re-trigger deploy (batch A — runner-starvation recovery 20260622T115650Z)
 # ci: re-trigger deploy (batch A — runner-starvation recovery 20260622T115650Z)
-# orun: redeploy 04-workers 20260923T152946Z
+# orun: redeploy 04-workers 20260923T154119Z
