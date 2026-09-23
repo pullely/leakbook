@@ -57,7 +57,8 @@ export type RouteFamily =
   | "billing"
   | "audit"
   | "notifications"
-  | "integrations";
+  | "integrations"
+  | "leak";
 
 interface BucketLimits {
   /** Bucket capacity (max tokens). */
@@ -89,6 +90,12 @@ const LIMITS: Record<RouteFamily, FamilyConfig> = {
     org: { limit: 300, windowSec: 60 },
   },
   project: {
+    identity: { limit: 60, windowSec: 60 },
+    org: { limit: 300, windowSec: 60 },
+  },
+  // The refrigerant log: sites, units and service visits — ordinary org CRUD,
+  // plus the QR lane a technician's phone calls once per scan and per visit.
+  leak: {
     identity: { limit: 60, windowSec: 60 },
     org: { limit: 300, windowSec: 60 },
   },

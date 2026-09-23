@@ -22,6 +22,7 @@ import { MeteringClient } from "./metering.js";
 import { NotificationsClient } from "./notifications.js";
 import { OrganizationsClient } from "./organizations.js";
 import { ProjectsClient } from "./projects.js";
+import { LeakClient } from "./leak.js";
 import { SecurityEventsClient } from "./securityEvents.js";
 import { WebhooksClient } from "./webhooks.js";
 import { Transport, type ClientOptions } from "./transport.js";
@@ -29,6 +30,7 @@ import { Transport, type ClientOptions } from "./transport.js";
 export class Leakbook {
   readonly organizations: OrganizationsClient;
   readonly projects: ProjectsClient;
+  readonly leak: LeakClient;
   readonly environments: EnvironmentsClient;
   readonly memberships: MembershipsClient;
   readonly apiKeys: ApiKeysClient;
@@ -48,6 +50,7 @@ export class Leakbook {
     this.transport = new Transport(options);
     this.organizations = new OrganizationsClient(this.transport);
     this.projects = new ProjectsClient(this.transport);
+    this.leak = new LeakClient(this.transport);
     this.environments = new EnvironmentsClient(this.transport);
     this.memberships = new MembershipsClient(this.transport);
     this.apiKeys = new ApiKeysClient(this.transport);
@@ -66,6 +69,7 @@ export class Leakbook {
 // Resource clients (also reachable via `client.<resource>`).
 export { OrganizationsClient } from "./organizations.js";
 export { ProjectsClient } from "./projects.js";
+export { LeakClient } from "./leak.js";
 export { EnvironmentsClient } from "./environments.js";
 export { MembershipsClient } from "./memberships.js";
 export {

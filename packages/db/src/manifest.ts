@@ -183,5 +183,14 @@ export const manifest: MigrationManifest = {
       description:
         "Connection pointer on the inbound-delivery inbox (nullable connection_id + partial index) — lets the per-connection delivery log scope precisely; attributed by the IG2 cron drain",
     },
+    {
+      id: "200_leak_core",
+      context: "leak",
+      path: "200_leak_core/up.sql",
+      checksum:
+        "ac8d9fbf404c9daf1bf0551ab8ad352f133c11a7f27e6064e6f3b5d4116021cc",
+      description:
+        "Refrigerant log foundation (LB1) — a contractor's customer sites (the leak-rate method per operating facility), the refrigerant-containing appliances at each (one per circuit; refrigerant, class, category, full charge in integer ounces, QR token), and the immutable service-event log (ounces added, recovered and returned; voided, never edited)",
+    },
   ],
 };

@@ -1,0 +1,48 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: LB-2
+spec:
+  goal: A contractor can register a customer site and its refrigerant appliances, print a QR label per appliance, and a technician who scans the label can log a service visit (refrigerant added, recovered and returned, in integer ounces) from a phone, with every entry kept immutable and voidable only with a reason.
+  # Component refs, fully qualified (bare names and paths do not match — runbook
+  # trap 15). identity-worker, membership-worker, api-edge and web-console-next
+  # carry the SOLO_MODE switch (Solo goes off: several technicians per
+  # contractor). Every other worker is here for runbook trap 17: this task
+  # changes packages/db (the trap-16 D1 fix and the leak context),
+  # packages/policy-engine (leak.* actions) and packages/contracts (the
+  # notifications allow-list), and a worker only redeploys when its own
+  # component.yaml changes.
+  affects:
+    - default/leakbook/db
+    - default/leakbook/db-tests
+    - default/leakbook/db-migrate
+    - default/leakbook/contracts
+    - default/leakbook/contracts-tests
+    - default/leakbook/sdk
+    - default/leakbook/policy-engine
+    - default/leakbook/policy-engine-tests
+    - default/leakbook/leak-worker
+    - default/leakbook/leak-worker-tests
+    - default/leakbook/api-edge
+    - default/leakbook/api-edge-tests
+    - default/leakbook/events-worker
+    - default/leakbook/notifications-worker
+    - default/leakbook/identity-worker
+    - default/leakbook/membership-worker
+    - default/leakbook/web-console-next
+    - default/leakbook/web-console-next-tests
+    - default/leakbook/admin-worker
+    - default/leakbook/billing-worker
+    - default/leakbook/config-worker
+    - default/leakbook/integrations-worker
+    - default/leakbook/metering-worker
+    - default/leakbook/policy-worker
+    - default/leakbook/projects-worker
+    - default/leakbook/webhooks-worker
+  doneWhen:
+    - the trap-16 D1 fix (factory/patches/cirrus-d1-fix.patch) is applied, so audited writes and organization create work on D1
+    - migration 200_leak_core is in the manifest, replays green against node:sqlite, and is applied on stage and prod
+    - on stage a signed-in user creates an organization (201), a site, an appliance (R-404A, 640 oz), resolves its QR token, and logs +64 oz through the QR lane
+    - a non-member gets 404 for the site, the appliance and the QR token; prod answers 401 unauthenticated on the new routes
+    - tests/leak-worker runs the worker over a real SQLite engine and is green in CI
+  gates: []
