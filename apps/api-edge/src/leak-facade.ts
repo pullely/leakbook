@@ -6,12 +6,13 @@ import { createTimings } from "@saas/contracts/timing";
 
 // The refrigerant log (leak-worker). Two authenticated lanes:
 //   /v1/organizations/{org}/sites…, /v1/organizations/{org}/appliances… — the register and the log;
-//   /v1/qr/{token}[/events] — what a scanned QR label opens (the org is found from the token).
+//   /v1/qr/{token}[/events] — what a scanned QR label opens (the org is found from the token);
+//   LB3: /v1/organizations/{org}/repair-clocks[/{rpc}|/sweep], …/sites/{ste}/exports|export.csv, …/exports/{exp}.
 // resolveActor → actor headers over the LEAK_WORKER binding, like every other
 // org route; the worker runs membership + policy itself.
 
 const LEAK_ORG_RE =
-  /^\/v1\/organizations\/[^/]+\/(?:sites(?:\/[^/]+(?:\/appliances)?)?|appliances\/[^/]+(?:\/(?:qr-token|leak-rate|events(?:\/[^/]+\/void)?))?)$/;
+  /^\/v1\/organizations\/[^/]+\/(?:sites(?:\/[^/]+(?:\/(?:appliances|exports|export\.csv))?)?|appliances\/[^/]+(?:\/(?:qr-token|leak-rate|events(?:\/[^/]+\/void)?))?|repair-clocks(?:\/[^/]+)?|exports\/[^/]+)$/;
 const LEAK_QR_RE = /^\/v1\/qr\/[^/]+(?:\/events)?$/;
 
 const FORWARDED_HEADERS = ["content-type", "content-length", "traceparent", "idempotency-key"];

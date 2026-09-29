@@ -383,6 +383,8 @@ export interface ListServiceEventsResponse {
 }
 export interface ServiceEventResponse {
   event: PublicServiceEvent;
+  /** LB3, on POST: the appliance's repair clock after this event (opened, verified, closed…), if any. */
+  repairClock?: PublicRepairClock | null;
 }
 /** GET /v1/qr/{token} — what a scanned label opens. */
 export interface ResolveQrResponse {

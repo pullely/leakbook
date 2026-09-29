@@ -1,4 +1,9 @@
 import type {
+  LeakExportResponse,
+  ListRepairClocksResponse,
+  RepairClockResponse,
+  RepairClockSweepResponse,
+  UpdateRepairClockRequest,
   LeakRateResponse,
   ApplianceResponse,
   CreateApplianceRequest,
@@ -138,6 +143,55 @@ export class LeakClient {
   getLeakRate(orgId: string, applianceId: string, opts: RequestOptions = {}): Promise<LeakRateResponse> {
     return this.transport.request<LeakRateResponse>(
       { method: "GET", path: `${appliance(orgId, applianceId)}/leak-rate` },
+      opts,
+    );
+  }
+
+  /** GET /v1/organizations/:orgId/repair-clocks — overdue first, then by the nearest deadline (LB3). */
+  listRepairClocks(
+    orgId: string,
+    query: { status?: "open" | "overdue" | "suspended" | "closed" } = {},
+    opts: RequestOptions = {},
+  ): Promise<ListRepairClocksResponse> {
+    return this.transport.request<ListRepairClocksResponse>(
+      { method: "GET", path: `/v1/organizations/${encodeURIComponent(orgId)}/repair-clocks`, query: { status: query.status } },
+      opts,
+    );
+  }
+
+  /** PATCH /v1/organizations/:orgId/repair-clocks/:clockId — shutdownRequired, notes. */
+  updateRepairClock(
+    orgId: string,
+    clockId: string,
+    body: UpdateRepairClockRequest,
+    opts: RequestOptions = {},
+  ): Promise<RepairClockResponse> {
+    return this.transport.request<RepairClockResponse>(
+      {
+        method: "PATCH",
+        path: `/v1/organizations/${encodeURIComponent(orgId)}/repair-clocks/${encodeURIComponent(clockId)}`,
+        body,
+      },
+      opts,
+    );
+  }
+
+  /** POST /v1/organizations/:orgId/repair-clocks/sweep — run today's reminder pass now (idempotent). */
+  runRepairClockSweep(orgId: string, opts: RequestOptions = {}): Promise<RepairClockSweepResponse> {
+    return this.transport.request<RepairClockSweepResponse>(
+      { method: "POST", path: `/v1/organizations/${encodeURIComponent(orgId)}/repair-clocks/sweep`, body: {} },
+      opts,
+    );
+  }
+
+  /** POST /v1/organizations/:orgId/sites/:siteId/exports — the site's inspection PDF, stored in R2. */
+  createSiteExport(orgId: string, siteId: string, opts: RequestOptions = {}): Promise<LeakExportResponse> {
+    return this.transport.request<LeakExportResponse>(
+      {
+        method: "POST",
+        path: `/v1/organizations/${encodeURIComponent(orgId)}/sites/${encodeURIComponent(siteId)}/exports`,
+        body: {},
+      },
       opts,
     );
   }
