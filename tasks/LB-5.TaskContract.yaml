@@ -1,0 +1,12 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: LB-5
+spec:
+  goal: identity-worker is reachable only through api-edge (its public workers.dev hostname is closed on stage and prod, runbook trap 37), and the epic's docs record Leakbook as shipped.
+  affects:
+    - default/leakbook/identity-worker
+  doneWhen:
+    - https://leakbook-identity-worker-stage and -prod on nexo-7be.workers.dev answer 404 on /health while api-edge /health answers 200 on both
+    - README says Shipped with Shipped as filled, and implementation-plan and IMPLEMENTATION-STATUS mark LB3 landed with its green deploy run
+  gates: []
