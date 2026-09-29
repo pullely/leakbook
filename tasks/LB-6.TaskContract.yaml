@@ -1,0 +1,14 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: LB-6
+spec:
+  goal: The repair-clock emails reach the organization's owners and admins on D1, where membership rows carry the public usr_ subject id rather than the identity UUID.
+  affects:
+    - default/leakbook/db
+    - default/leakbook/leak-worker
+    - default/leakbook/leak-worker-tests
+  doneWhen:
+    - listAdminEmails resolves a membership subject stored as usr_<hex> and one stored as a UUID, pinned by a real-SQLite test
+    - on stage the org owner receives the opened and ladder emails and a second sweep on the same day sends nothing
+  gates: []

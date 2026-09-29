@@ -54,15 +54,22 @@ function fakeR2(): { bucket: R2Bucket; objects: Map<string, Uint8Array> } {
   return { bucket: bucket as unknown as R2Bucket, objects };
 }
 
-function seedPeople(w: TestWorld): void {
+/**
+ * Membership rows as they are on D1: the subject is the PUBLIC id
+ * ("usr_<32 hex>"), while identity_users.id is the UUID. (The first version
+ * of this seed used UUIDs on both sides and hid a join that matched nothing
+ * on stage.)
+ */
+function seedPeople(w: TestWorld, subjectForm: "public" | "uuid" = "public"): void {
   const person = (id: string, email: string, role: string) => {
+    const subject = subjectForm === "public" ? `usr_${id.replace(/-/g, "")}` : id;
     w.db.prepare("INSERT INTO identity_users (id, email, email_lower) VALUES (?, ?, ?)").run(id, email, email);
     w.db
       .prepare("INSERT INTO membership_organization_members (id, org_id, subject_id) VALUES (?, ?, ?)")
-      .run(crypto.randomUUID(), ORG_UUID, id);
+      .run(crypto.randomUUID(), ORG_UUID, subject);
     w.db
       .prepare("INSERT INTO membership_role_assignments (id, org_id, subject_id, role) VALUES (?, ?, ?, ?)")
-      .run(crypto.randomUUID(), ORG_UUID, id, role);
+      .run(crypto.randomUUID(), ORG_UUID, subject, role);
   };
   person(OWNER, OWNER_EMAIL, "owner");
   person(TECH, TECH_EMAIL, "builder");
@@ -286,6 +293,21 @@ describe("LB3 — the repair clock", () => {
     const res = await send(w, `/v1/organizations/${ORG}/repair-clocks/sweep`, OWNER, {});
     expect(res.status).toBe(200);
     expect((await json(res)).data.report).toMatchObject({ clocks: 1 });
+  });
+});
+
+describe("LB3 — who the clock emails", () => {
+  it("resolves owners and admins whether membership stores the usr_ public id or the UUID", async () => {
+    for (const form of ["public", "uuid"] as const) {
+      const w = world(ORG_UUID);
+      seedPeople(w, form);
+      const db = openDb(w.env)!;
+      try {
+        expect(await db.clocks.listAdminEmails(ORG_UUID)).toEqual([OWNER_EMAIL]);
+      } finally {
+        await db.dispose();
+      }
+    }
   });
 });
 
