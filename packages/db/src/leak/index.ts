@@ -13,3 +13,6 @@ export type {
 } from "./types.js";
 
 export { createLeakRepository } from "./repository.js";
+
+export type { LeakClockRepository, LeakExport, OpenClockInput, RepairClock } from "./clock-repository.js";
+export { createLeakClockRepository } from "./clock-repository.js";

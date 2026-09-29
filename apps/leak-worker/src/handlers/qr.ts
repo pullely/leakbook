@@ -74,7 +74,7 @@ export async function handleQrLogEvent(
       parsed.body && typeof parsed.body === "object" && !Array.isArray(parsed.body)
         ? { ...(parsed.body as Record<string, unknown>), loggedVia: "qr" }
         : parsed.body;
-    return await logEvent(body, db, requestId, actor, appliance);
+    return await logEvent(env, body, db, requestId, actor, appliance);
   } catch {
     return unavailable(requestId);
   } finally {

@@ -10,11 +10,15 @@ import {
 } from "./handlers/appliances.js";
 import { handleCreateEvent, handleListEvents, handleVoidEvent } from "./handlers/events.js";
 import { handleQrLogEvent, handleResolveQr } from "./handlers/qr.js";
+import { handleListClocks, handleRunSweep, handleUpdateClock } from "./handlers/clocks.js";
+import { handleCreateExport, handleExportCsv, handleGetExport } from "./handlers/exports.js";
 import { errorResponse, methodNotAllowed, notFound } from "./http.js";
 import {
   generateRequestId,
   parseAppliancePublicId,
+  parseClockPublicId,
   parseEventPublicId,
+  parseExportPublicId,
   parseOrgPublicId,
   parseSitePublicId,
 } from "./ids.js";
@@ -51,6 +55,13 @@ const APPLIANCE_QR_RE = /^\/v1\/organizations\/([^/]+)\/appliances\/([^/]+)\/qr-
 const APPLIANCE_LEAK_RATE_RE = /^\/v1\/organizations\/([^/]+)\/appliances\/([^/]+)\/leak-rate$/;
 const APPLIANCE_EVENTS_RE = /^\/v1\/organizations\/([^/]+)\/appliances\/([^/]+)\/events$/;
 const APPLIANCE_EVENT_VOID_RE = /^\/v1\/organizations\/([^/]+)\/appliances\/([^/]+)\/events\/([^/]+)\/void$/;
+// LB3: repair clocks and exports.
+const CLOCKS_RE = /^\/v1\/organizations\/([^/]+)\/repair-clocks$/;
+const CLOCKS_SWEEP_RE = /^\/v1\/organizations\/([^/]+)\/repair-clocks\/sweep$/;
+const CLOCK_RE = /^\/v1\/organizations\/([^/]+)\/repair-clocks\/([^/]+)$/;
+const SITE_EXPORTS_RE = /^\/v1\/organizations\/([^/]+)\/sites\/([^/]+)\/exports$/;
+const SITE_EXPORT_CSV_RE = /^\/v1\/organizations\/([^/]+)\/sites\/([^/]+)\/export\.csv$/;
+const EXPORT_RE = /^\/v1\/organizations\/([^/]+)\/exports\/([^/]+)$/;
 // The label lane: the token is the key, the org is found from it.
 const QR_RE = /^\/v1\/qr\/([^/]+)$/;
 const QR_EVENTS_RE = /^\/v1\/qr\/([^/]+)\/events$/;
@@ -73,6 +84,52 @@ async function routeApi(request: Request, env: Env, requestId: string, path: str
     if (method !== "GET") return methodNotAllowed(requestId);
     if (!actor) return unauthenticated(requestId);
     return handleResolveQr(env, requestId, actor, m[1]!);
+  }
+  if ((m = path.match(CLOCKS_RE))) {
+    const org = parseOrgPublicId(m[1]!);
+    if (!org) return notFound(requestId);
+    if (method !== "GET") return methodNotAllowed(requestId);
+    if (!actor) return unauthenticated(requestId);
+    return handleListClocks(request, env, requestId, actor, org);
+  }
+  if ((m = path.match(CLOCKS_SWEEP_RE))) {
+    const org = parseOrgPublicId(m[1]!);
+    if (!org) return notFound(requestId);
+    if (method !== "POST") return methodNotAllowed(requestId);
+    if (!actor) return unauthenticated(requestId);
+    return handleRunSweep(env, requestId, actor, org);
+  }
+  if ((m = path.match(CLOCK_RE))) {
+    const org = parseOrgPublicId(m[1]!);
+    const rpc = parseClockPublicId(m[2]!);
+    if (!org || !rpc) return notFound(requestId);
+    if (method !== "PATCH") return methodNotAllowed(requestId);
+    if (!actor) return unauthenticated(requestId);
+    return handleUpdateClock(request, env, requestId, actor, org, rpc);
+  }
+  if ((m = path.match(SITE_EXPORTS_RE))) {
+    const org = parseOrgPublicId(m[1]!);
+    const site = parseSitePublicId(m[2]!);
+    if (!org || !site) return notFound(requestId);
+    if (method !== "POST") return methodNotAllowed(requestId);
+    if (!actor) return unauthenticated(requestId);
+    return handleCreateExport(env, requestId, actor, org, site);
+  }
+  if ((m = path.match(SITE_EXPORT_CSV_RE))) {
+    const org = parseOrgPublicId(m[1]!);
+    const site = parseSitePublicId(m[2]!);
+    if (!org || !site) return notFound(requestId);
+    if (method !== "GET") return methodNotAllowed(requestId);
+    if (!actor) return unauthenticated(requestId);
+    return handleExportCsv(env, requestId, actor, org, site);
+  }
+  if ((m = path.match(EXPORT_RE))) {
+    const org = parseOrgPublicId(m[1]!);
+    const exp = parseExportPublicId(m[2]!);
+    if (!org || !exp) return notFound(requestId);
+    if (method !== "GET") return methodNotAllowed(requestId);
+    if (!actor) return unauthenticated(requestId);
+    return handleGetExport(env, requestId, actor, org, exp);
   }
   if ((m = path.match(APPLIANCE_EVENT_VOID_RE))) {
     const org = parseOrgPublicId(m[1]!);

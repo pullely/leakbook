@@ -15,6 +15,7 @@
     "./projects": "./src/projects.ts",
     "./leak": "./src/leak.ts",
     "./leak-rate": "./src/leak-rate.ts",
+    "./leak-clock": "./src/leak-clock.ts",
     "./events": "./src/events.ts",
     "./security-events": "./src/security-events.ts",
     "./api-keys": "./src/api-keys.ts",

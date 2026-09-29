@@ -13,8 +13,10 @@ import type {
   ServiceEventSource,
 } from "@saas/contracts/leak";
 import type { RateEvent } from "@saas/contracts/leak-rate";
-import type { Appliance, LeakSite, ServiceEvent } from "@saas/db/leak";
-import { appliancePublicId, eventPublicId, orgPublicId, sitePublicId } from "./ids.js";
+import { clockDeadline, daysLeft, type RepairClockStatus } from "@saas/contracts/leak-clock";
+import type { PublicLeakExport, PublicRepairClock } from "@saas/contracts/leak";
+import type { Appliance, LeakExport, LeakSite, RepairClock, ServiceEvent } from "@saas/db/leak";
+import { appliancePublicId, clockPublicId, eventPublicId, exportPublicId, orgPublicId, sitePublicId } from "./ids.js";
 
 export function toPublicSite(s: LeakSite): PublicLeakSite {
   return {
@@ -123,4 +125,49 @@ export function toRateHistory(events: ServiceEvent[]): RateHistoryEvent[] {
       returnedOz: e.returnedOz,
       verificationPassed: e.verificationPassed,
     }));
+}
+
+export function toPublicClock(c: RepairClock, today: string): PublicRepairClock {
+  const deadline = clockDeadline({
+    status: c.status === "overdue" ? "open" : (c.status as RepairClockStatus),
+    repairDueOn: c.repairDueOn,
+    initialVerifiedOn: c.initialVerifiedOn,
+    followupDueOn: c.followupDueOn,
+  });
+  return {
+    id: clockPublicId(c.id),
+    orgId: orgPublicId(c.orgId),
+    siteId: sitePublicId(c.siteId),
+    applianceId: appliancePublicId(c.applianceId),
+    applianceName: c.applianceName,
+    siteName: c.siteName,
+    openedByEventId: eventPublicId(c.openedByEventId),
+    openedOn: c.openedOn,
+    leakRateBp: c.leakRateBp,
+    thresholdPct: c.thresholdPct,
+    regime: c.regime as PublicRepairClock["regime"],
+    shutdownRequired: c.shutdownRequired,
+    repairDueOn: c.repairDueOn,
+    initialVerifiedOn: c.initialVerifiedOn,
+    followupDueOn: c.followupDueOn,
+    closedOn: c.closedOn,
+    closedReason: c.closedReason as PublicRepairClock["closedReason"],
+    status: c.status as PublicRepairClock["status"],
+    suspendedDays: c.suspendedDays,
+    notes: c.notes,
+    deadline: deadline ? { ...deadline, daysLeft: daysLeft(deadline.dueOn, today) } : null,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+}
+
+export function toPublicExport(e: LeakExport): PublicLeakExport {
+  return {
+    id: exportPublicId(e.id),
+    orgId: orgPublicId(e.orgId),
+    siteId: sitePublicId(e.siteId),
+    sha256: e.sha256,
+    sizeBytes: e.sizeBytes,
+    createdAt: e.createdAt,
+  };
 }

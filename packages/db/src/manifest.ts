@@ -201,5 +201,14 @@ export const manifest: MigrationManifest = {
       description:
         "The leak-rate engine (LB2) — leak_oz, rate_method, rate_days, leak_rate_bp, regime, threshold_pct and exceeds_threshold on each service event, computed once at insert (40 CFR 84.102 / 84.106(b)); a partial index for the site's has-a-rate check",
     },
+    {
+      id: "220_leak_repair_clocks",
+      context: "leak",
+      path: "220_leak_repair_clocks/up.sql",
+      checksum:
+        "c0f4797a6c84af8b15201223076086822b9684976436195f4b547bd256318933",
+      description:
+        "The repair clock (LB3) — leak_repair_clocks (one running clock per appliance, opened by an exceedance, 30/120-day repair and 10-day follow-up deadlines, suspension while mothballed), leak_reminders (one claimed row per rung and recipient) and leak_exports (the inspection PDFs in R2, with their SHA-256)",
+    },
   ],
 };
