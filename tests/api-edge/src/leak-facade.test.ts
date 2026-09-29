@@ -51,6 +51,7 @@ describe("api-edge leak facade", () => {
       "/v1/organizations/org_a/sites/ste_b/appliances",
       "/v1/organizations/org_a/appliances/apl_c",
       "/v1/organizations/org_a/appliances/apl_c/qr-token",
+      "/v1/organizations/org_a/appliances/apl_c/leak-rate",
       "/v1/organizations/org_a/appliances/apl_c/events",
       "/v1/organizations/org_a/appliances/apl_c/events/sev_d/void",
       "/v1/qr/abcdefghijklmnopqrstuvwxyz234567",
@@ -65,6 +66,7 @@ describe("api-edge leak facade", () => {
       "/v1/organizations/org_a/appliances",
       "/v1/organizations/org_a/sites/ste_b/appliances/apl_c",
       "/v1/organizations/org_a/appliances/apl_c/events/sev_d",
+      "/v1/organizations/org_a/appliances/apl_c/leak-rate/x",
       "/v1/qr",
       "/v1/qr/tok/events/sev_d",
     ]) {
