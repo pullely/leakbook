@@ -72,6 +72,7 @@ export async function runScheduledClockSweep(env: Env): Promise<SweepReport | nu
   if (!db) return null;
   try {
     const report = await runClockSweep(clockDeps(env, db), todayUtc(), nowIso());
+    // eslint-disable-next-line no-console -- one structured line per tick for Workers Logs
     console.log(JSON.stringify({ level: "info", msg: "leak.clock.sweep", ...report }));
     return report;
   } finally {
