@@ -394,6 +394,8 @@ export interface ResolveQrResponse {
   events: PublicServiceEvent[];
   /** LB2: for the live preview on the phone page. */
   rateHistory: RateHistoryEvent[];
+  /** LB3: the running repair clock, for the phone page's banner. */
+  repairClock: PublicRepairClock | null;
 }
 
 /** GET /v1/organizations/{org}/appliances/{apl}/leak-rate (LB2). */

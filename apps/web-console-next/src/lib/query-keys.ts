@@ -14,6 +14,7 @@ export const qk = {
   leakSite: (orgId: string, siteId: string) => ["leakSite", orgId, siteId] as const,
   leakAppliance: (orgId: string, applianceId: string) => ["leakAppliance", orgId, applianceId] as const,
   leakQr: (token: string) => ["leakQr", token] as const,
+  leakClocks: (orgId: string, status: string) => ["leakClocks", orgId, status] as const,
   environments: (orgId: string, projectId: string) =>
     ["environments", orgId, projectId] as const,
   members: (orgId: string) => ["members", orgId] as const,

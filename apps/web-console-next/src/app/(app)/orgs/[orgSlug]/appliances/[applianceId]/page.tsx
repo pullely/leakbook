@@ -22,6 +22,7 @@ import { QrLabel, labelUrl } from "@/components/leak/qr-label";
 import { LogForm } from "@/components/leak/log-form";
 import { EventList, toFormResult } from "@/components/leak/event-list";
 import { ThresholdLine } from "@/components/leak/rate";
+import { ClockBanner } from "@/components/leak/clock";
 
 export default function AppliancePage() {
   const params = useParams<{ orgSlug: string; applianceId: string }>();
@@ -41,7 +42,7 @@ function Inner({ orgId, orgSlug, applianceId }: { orgId: string; orgSlug: string
 
   if (q.loading) return <Skeleton className="h-40 w-full" />;
   if (q.error || !q.data) return <p className="text-sm text-destructive">{q.error?.message ?? "Unit not found"}</p>;
-  const { appliance, site, events, rateHistory } = q.data;
+  const { appliance, site, events, rateHistory, repairClock } = q.data;
 
   async function rotate() {
     if (!window.confirm("Replace this unit's label? The printed label stops working at once.")) return;
@@ -68,6 +69,8 @@ function Inner({ orgId, orgSlug, applianceId }: { orgId: string; orgSlug: string
         </div>
         <Badge variant={appliance.status === "active" ? "default" : "secondary"}>{appliance.status}</Badge>
       </header>
+
+      {repairClock && <ClockBanner clock={repairClock} />}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
         <Card>

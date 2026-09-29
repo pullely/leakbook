@@ -1,10 +1,10 @@
 import type { Env } from "../env.js";
 import type { ActorContext } from "../router.js";
 import { allowed } from "../authz.js";
-import { openDb, previewHistorySince } from "../context.js";
+import { openDb, previewHistorySince, todayUtc } from "../context.js";
 import { notFound, successResponse, unavailable, validationError } from "../http.js";
 import { isQrToken, orgPublicId } from "../ids.js";
-import { toPublicAppliance, toPublicEvent, toPublicSite, toRateHistory } from "../present.js";
+import { toPublicAppliance, toPublicClock, toPublicEvent, toPublicSite, toRateHistory } from "../present.js";
 import { logEvent } from "./events.js";
 import { readJson } from "./json.js";
 
@@ -30,10 +30,11 @@ export async function handleResolveQr(
     const appliance = await db.leak.findApplianceByQrToken(token);
     if (!appliance) return notFound(requestId);
     if (!(await allowed(env, actor, appliance.orgId, "leak.read", requestId))) return notFound(requestId);
-    const [site, events, history] = await Promise.all([
+    const [site, events, history, clock] = await Promise.all([
       db.leak.getSite(appliance.orgId, appliance.siteId),
       db.leak.listServiceEvents(appliance.orgId, appliance.id, { limit: QR_RECENT_EVENTS }),
       db.leak.listEventsInLogOrder(appliance.orgId, appliance.id, previewHistorySince()),
+      db.clocks.getRunningClock(appliance.orgId, appliance.id),
     ]);
     if (!site) return notFound(requestId);
     return successResponse(
@@ -43,6 +44,7 @@ export async function handleResolveQr(
         appliance: toPublicAppliance(appliance),
         events: events.map(toPublicEvent),
         rateHistory: toRateHistory(history),
+        repairClock: clock ? toPublicClock(clock, todayUtc()) : null,
       },
       requestId,
     );
