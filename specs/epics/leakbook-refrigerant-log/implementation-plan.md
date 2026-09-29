@@ -49,7 +49,7 @@ as a dependency of `leak-worker` (trap 21).
 - on prod: `/health` 200, the new routes answer **401** unauthenticated
 - `tests/leak-worker` passes on real `node:sqlite` (flow + the trap-22 `RETURNING` pins)
 
-## LB2 — the leak-rate engine
+## LB2 — the leak-rate engine ✅
 
 The compliance answer. The pure module `packages/contracts/src/leak-rate.ts`
 (design §2: applicability and thresholds, the annualizing and rolling-average

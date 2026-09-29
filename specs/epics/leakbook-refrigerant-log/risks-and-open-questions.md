@@ -110,3 +110,12 @@ must be classified by the office when the appliance is created (422 without
 it). A wrong class on a record means a wrong regime. Mitigation: the class is
 shown beside the refrigerant everywhere, and a class change is audited with
 old and new values.
+
+## LB-L — A clock that fails to open after its exceedance is logged (RISK, open)
+
+D1 has no transaction across the event insert and the clock insert. If the
+clock insert fails, the event is recorded with `exceeds_threshold = 1` and
+no clock opens. The worker logs a warning, and the next exceedance on that
+appliance opens one. Mitigation, if it is ever seen in the logs: the daily
+sweep could open a clock for any exceeding event from the last 30 days that
+has none. That is one query, and it is not built.
