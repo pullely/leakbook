@@ -1,0 +1,29 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: LB-3
+spec:
+  goal: Every refrigerant addition logged on an appliance carries its leak rate, computed by the server from the log exactly as 40 CFR 84.102 and 84.106(b) define it (annualizing or rolling average per site), with the applicable threshold and an exact exceeds-threshold verdict.
+  # Component refs, fully qualified (runbook trap 15). packages/contracts and
+  # packages/db change; the workers that use the new code are leak-worker,
+  # api-edge (the facade learns the leak-rate route) and the console.
+  affects:
+    - default/leakbook/contracts
+    - default/leakbook/contracts-tests
+    - default/leakbook/db
+    - default/leakbook/db-tests
+    - default/leakbook/db-migrate
+    - default/leakbook/sdk
+    - default/leakbook/leak-worker
+    - default/leakbook/leak-worker-tests
+    - default/leakbook/api-edge
+    - default/leakbook/api-edge-tests
+    - default/leakbook/web-console-next
+    - default/leakbook/web-console-next-tests
+  doneWhen:
+    - every worked example W1-W23 of design section 2.7 is a named passing test in tests/contracts
+    - the W1, W6, W8, W18 and W19 sequences pass end to end in tests/leak-worker on real SQLite
+    - migration 210_leak_rates is in the manifest and applied on stage and prod
+    - on stage the W1 sequence returns leakRateBp 4056, thresholdPct 20, exceedsThreshold true, and W3 returns false
+    - a site with a calculated rate refuses a leak-rate method change with 409
+  gates: []
