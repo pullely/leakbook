@@ -11,7 +11,7 @@ export interface AuditInput {
   orgId: string;
   actor: AuditActor;
   requestId: string;
-  subjectKind: "leak_site" | "leak_appliance" | "leak_service_event";
+  subjectKind: "leak_site" | "leak_appliance" | "leak_service_event" | "leak_repair_clock" | "leak_export";
   subjectId: string;
   subjectName: string;
   description: string;

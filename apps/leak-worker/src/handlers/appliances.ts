@@ -5,7 +5,7 @@ import { recordAudit } from "../audit.js";
 import { nowIso, openDb, previewHistorySince, todayUtc } from "../context.js";
 import { errorResponse, notFound, successResponse, unavailable, validationError } from "../http.js";
 import { actorSubjectUuid, appliancePublicId, generateQrToken, sitePublicId } from "../ids.js";
-import { toPublicAppliance, toPublicEvent, toPublicSite, toRateEvent, toRateHistory } from "../present.js";
+import { toPublicAppliance, toPublicClock, toPublicEvent, toPublicSite, toRateEvent, toRateHistory } from "../present.js";
 import { validateApplianceBody } from "../validate.js";
 import { applicability, chronicLeak } from "@saas/contracts/leak-rate";
 import type { ApplianceCategory, LeakRateMethod, RefrigerantClass } from "@saas/contracts/leak";
@@ -87,10 +87,11 @@ export async function handleGetAppliance(
   try {
     const appliance = await db.leak.getAppliance(orgId, applianceId);
     if (!appliance) return notFound(requestId);
-    const [site, events, history] = await Promise.all([
+    const [site, events, history, clock] = await Promise.all([
       db.leak.getSite(orgId, appliance.siteId),
       db.leak.listServiceEvents(orgId, applianceId, { limit: APPLIANCE_EVENTS_INLINE }),
       db.leak.listEventsInLogOrder(orgId, applianceId, previewHistorySince()),
+      db.clocks.getRunningClock(orgId, applianceId),
     ]);
     if (!site) return notFound(requestId);
     return successResponse(
@@ -99,6 +100,7 @@ export async function handleGetAppliance(
         site: toPublicSite(site),
         events: events.map(toPublicEvent),
         rateHistory: toRateHistory(history),
+        repairClock: clock ? toPublicClock(clock, todayUtc()) : null,
       },
       requestId,
     );

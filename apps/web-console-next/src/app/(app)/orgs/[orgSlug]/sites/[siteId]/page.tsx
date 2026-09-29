@@ -34,6 +34,7 @@ import {
   formatOunces,
 } from "@saas/contracts/leak";
 import { quantityToOunces } from "@/components/leak/log-form";
+import { downloadWithAuth } from "@/lib/download";
 
 export default function SitePage() {
   const params = useParams<{ orgSlug: string; siteId: string }>();
@@ -43,13 +44,35 @@ export default function SitePage() {
 }
 
 function Inner({ orgId, orgSlug, siteId }: { orgId: string; orgSlug: string; siteId: string }) {
-  const { client } = useSession();
+  const { client, target, token } = useSession();
+  const { toast } = useToast();
+  const [exporting, setExporting] = React.useState(false);
   const q = useApiQuery(qk.leakSite(orgId, siteId), () => wrap(() => client.leak.getSite(orgId, siteId)));
   const [adding, setAdding] = React.useState(false);
 
   if (q.loading) return <Skeleton className="h-40 w-full" />;
   if (q.error || !q.data) return <p className="text-sm text-destructive">{q.error?.message ?? "Site not found"}</p>;
   const { site, appliances } = q.data;
+
+  // LB3: the inspection PDF is rendered and stored in R2 by the API, then downloaded.
+  async function exportPdf() {
+    setExporting(true);
+    const r = await wrap(() => client.leak.createSiteExport(orgId, siteId));
+    if (!r.ok) {
+      setExporting(false);
+      toast({ kind: "error", title: "Could not export", description: r.error.message });
+      return;
+    }
+    const d = await downloadWithAuth(target.url, token, `/v1/organizations/${orgId}/exports/${r.data.export.id}`, `leakbook-${r.data.export.id}.pdf`);
+    setExporting(false);
+    if (!d.ok) toast({ kind: "error", title: "Could not download the PDF", description: d.message });
+    else toast({ kind: "success", title: "PDF exported", description: `SHA-256 ${r.data.export.sha256.slice(0, 16)}…` });
+  }
+
+  async function exportCsv() {
+    const d = await downloadWithAuth(target.url, token, `/v1/organizations/${orgId}/sites/${siteId}/export.csv`, "leakbook-service-log.csv");
+    if (!d.ok) toast({ kind: "error", title: "Could not download the CSV", description: d.message });
+  }
 
   return (
     <div className="space-y-5">
@@ -67,7 +90,13 @@ function Inner({ orgId, orgSlug, siteId }: { orgId: string; orgSlug: string; sit
               : ""}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" disabled={exporting} onClick={() => void exportPdf()}>
+            {exporting ? "Exporting…" : "Inspection PDF"}
+          </Button>
+          <Button variant="ghost" onClick={() => void exportCsv()}>
+            CSV
+          </Button>
           {appliances.length > 0 && (
             <Button variant="outline" asChild>
               <Link href={`/orgs/${orgSlug}/sites/${site.id}/labels`}>Print labels</Link>

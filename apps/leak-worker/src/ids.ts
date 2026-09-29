@@ -20,6 +20,12 @@ export const parseAppliancePublicId = (id: string): Uuid | null => uuidFromPubli
 export const eventPublicId = (uuid: string): string => `sev_${uuidToHex(uuid)}`;
 export const parseEventPublicId = (id: string): Uuid | null => uuidFromPublicId(id, "sev");
 
+export const clockPublicId = (uuid: string): string => `rpc_${uuidToHex(uuid)}`;
+export const parseClockPublicId = (id: string): Uuid | null => uuidFromPublicId(id, "rpc");
+
+export const exportPublicId = (uuid: string): string => `exp_${uuidToHex(uuid)}`;
+export const parseExportPublicId = (id: string): Uuid | null => uuidFromPublicId(id, "exp");
+
 /**
  * The actor id in the shape a UUID column takes: pass a UUID through, decode a
  * `usr_<hex>` public id, and write null rather than garbage for anything else.

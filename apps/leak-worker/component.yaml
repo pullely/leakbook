@@ -15,6 +15,10 @@ spec:
     - component: db-migrate
     - component: membership-worker
     - component: policy-worker
+    # LB3: the repair-clock emails go through notifications-worker, and the
+    # EXPORTS binding names a bucket that must exist before the deploy.
+    - component: notifications-worker
+    - component: cloudflare-r2
   # BF6 wiring documents from orun secrets (SEC-JOB): lease-published by
   # the infra components; wire-live renders the wrangler template from
   # these instead of Secrets Manager documents.

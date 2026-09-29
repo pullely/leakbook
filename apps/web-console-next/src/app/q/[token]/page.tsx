@@ -12,6 +12,8 @@ import { useToast } from "@/components/ui/toast";
 import { APPLIANCE_CATEGORY_LABELS, formatOunces } from "@saas/contracts/leak";
 import { LogForm } from "@/components/leak/log-form";
 import { EventList, toFormResult } from "@/components/leak/event-list";
+import { ClockBanner } from "@/components/leak/clock";
+import type { PublicRepairClock } from "@saas/contracts/leak";
 
 /**
  * What a scanned QR label opens: one column, big touch targets, no console
@@ -60,6 +62,8 @@ function Label({ token }: { token: string }) {
   const { client } = useSession();
   const { toast } = useToast();
   const q = useApiQuery(qk.leakQr(token), () => wrap(() => client.leak.resolveQr(token)));
+  // LB3: the clock state the last save returned (the QR read carries it too).
+  const [savedClock, setSavedClock] = React.useState<PublicRepairClock | null | undefined>(undefined);
 
   if (q.loading) return <Skeleton className="h-40 w-full" />;
   if (q.error || !q.data) {
@@ -74,6 +78,7 @@ function Label({ token }: { token: string }) {
     );
   }
   const { appliance, site, events, rateHistory } = q.data;
+  const clock = savedClock !== undefined ? savedClock : (q.data.repairClock ?? null);
 
   return (
     <>
@@ -89,6 +94,8 @@ function Label({ token }: { token: string }) {
         {appliance.location && <div className="text-sm text-muted-foreground">{appliance.location}</div>}
       </header>
 
+      {clock && <ClockBanner clock={clock} />}
+
       {appliance.status === "retired" ? (
         <p className="rounded-md border p-3 text-sm">This unit is retired; it takes no more service entries.</p>
       ) : (
@@ -100,6 +107,7 @@ function Label({ token }: { token: string }) {
             onSubmit={async (body) => {
               const r = await wrap(() => client.leak.logEventByQr(token, body));
               if (r.ok) {
+                setSavedClock(r.data.repairClock ?? null);
                 toast({ kind: "success", title: "Visit logged", description: `${appliance.name}, ${body.serviceDate}` });
                 q.reload();
               }

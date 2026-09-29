@@ -22,6 +22,19 @@
       "vars": {
         "ENVIRONMENT": "stage"
       },
+      // LB3: the daily repair-clock sweep. 14:00 UTC is early morning across
+      // the US, so a reminder is in the office's inbox for the working day.
+      "triggers": {
+        "crons": ["0 14 * * *"]
+      },
+      // The export bucket, bound by the name the runner creates: it prefixes
+      // namespacePrefix ("stg-") onto infra/terraform/cloudflare-r2's name (runbook trap 26).
+      "r2_buckets": [
+        {
+          "binding": "EXPORTS",
+          "bucket_name": "stg-leakbook-exports-stage"
+        }
+      ],
       "d1_databases": [
         {
           "binding": "PLATFORM_DB",
@@ -37,6 +50,10 @@
         {
           "binding": "POLICY_WORKER",
           "service": "leakbook-policy-worker-stage"
+        },
+        {
+          "binding": "NOTIFICATIONS_WORKER",
+          "service": "leakbook-notifications-worker-stage"
         }
       ]
     },
@@ -45,6 +62,19 @@
       "vars": {
         "ENVIRONMENT": "prod"
       },
+      // LB3: the daily repair-clock sweep. 14:00 UTC is early morning across
+      // the US, so a reminder is in the office's inbox for the working day.
+      "triggers": {
+        "crons": ["0 14 * * *"]
+      },
+      // The export bucket, bound by the name the runner creates: it prefixes
+      // namespacePrefix ("prod-") onto infra/terraform/cloudflare-r2's name (runbook trap 26).
+      "r2_buckets": [
+        {
+          "binding": "EXPORTS",
+          "bucket_name": "prod-leakbook-exports-prod"
+        }
+      ],
       "d1_databases": [
         {
           "binding": "PLATFORM_DB",
@@ -60,6 +90,10 @@
         {
           "binding": "POLICY_WORKER",
           "service": "leakbook-policy-worker-prod"
+        },
+        {
+          "binding": "NOTIFICATIONS_WORKER",
+          "service": "leakbook-notifications-worker-prod"
         }
       ]
     }

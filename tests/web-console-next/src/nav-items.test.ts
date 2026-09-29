@@ -65,7 +65,7 @@ describe("buildNavSections under the Solo (M0) profile", () => {
     const org = buildNavSections({ orgSlug: "acme" }, true).find((s) => s.id === "org")!;
     expect(org.label).toBe("Account");
     const hrefs = org.links.map((l) => l.href);
-    expect(hrefs).toEqual(["/orgs/acme/sites", "/orgs/acme/settings"]); // the sites are the product; of the plumbing only Settings survives
+    expect(hrefs).toEqual(["/orgs/acme/sites", "/orgs/acme/repair-clocks", "/orgs/acme/settings"]); // the sites and their clocks are the product; of the plumbing only Settings survives
     expect(hrefs).not.toContain("/orgs/acme/projects");
     expect(hrefs).not.toContain("/orgs/acme/usage");
   });
@@ -80,6 +80,7 @@ describe("buildNavSections under the Solo (M0) profile", () => {
     expect(org.label).toBe("Org · acme");
     expect(org.links.map((l) => l.href)).toEqual([
       "/orgs/acme/sites",
+      "/orgs/acme/repair-clocks",
       "/orgs/acme/projects",
       "/orgs/acme/usage",
       "/orgs/acme/settings",

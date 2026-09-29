@@ -10,6 +10,7 @@ export * from "./events.js";
 export * from "./projects.js";
 export * from "./leak.js";
 export * from "./leak-rate.js";
+export * from "./leak-clock.js";
 export * from "./config.js";
 export * from "./security-events.js";
 export * from "./api-keys.js";

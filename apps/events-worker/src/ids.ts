@@ -48,6 +48,14 @@ export function leakServiceEventPublicId(uuid: string): string {
   return `sev_${uuidToHex(uuid)}`;
 }
 
+export function leakRepairClockPublicId(uuid: string): string {
+  return `rpc_${uuidToHex(uuid)}`;
+}
+
+export function leakExportPublicId(uuid: string): string {
+  return `exp_${uuidToHex(uuid)}`;
+}
+
 const SUBJECT_KIND_PREFIX: Record<string, (uuid: string) => string> = {
   organization: orgPublicId,
   project: projectPublicId,
@@ -57,6 +65,8 @@ const SUBJECT_KIND_PREFIX: Record<string, (uuid: string) => string> = {
   leak_site: leakSitePublicId,
   leak_appliance: leakAppliancePublicId,
   leak_service_event: leakServiceEventPublicId,
+  leak_repair_clock: leakRepairClockPublicId,
+  leak_export: leakExportPublicId,
 };
 
 export function toPublicId(kind: string, rawId: string): string {

@@ -1,0 +1,34 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: LB-4
+spec:
+  goal: An addition over the leak-rate threshold opens a 30-day repair clock that verification tests carry to closure, a daily cron reminds the contractor's admins and escalates an overdue repair to the site's owner contact exactly once per rung, and a site's record exports as a PDF stored in R2 (and as CSV).
+  # Component refs, fully qualified (runbook trap 15). cloudflare-r2 is new
+  # (the export bucket); events-worker learns the rpc_/exp_ subject prefixes;
+  # notifications-worker gains the four repair-clock templates.
+  affects:
+    - default/leakbook/contracts
+    - default/leakbook/contracts-tests
+    - default/leakbook/db
+    - default/leakbook/db-tests
+    - default/leakbook/db-migrate
+    - default/leakbook/sdk
+    - default/leakbook/cloudflare-r2
+    - default/leakbook/leak-worker
+    - default/leakbook/leak-worker-tests
+    - default/leakbook/api-edge
+    - default/leakbook/api-edge-tests
+    - default/leakbook/events-worker
+    - default/leakbook/events-worker-tests
+    - default/leakbook/notifications-worker
+    - default/leakbook/notifications-worker-tests
+    - default/leakbook/web-console-next
+    - default/leakbook/web-console-next-tests
+  doneWhen:
+    - migration 220_leak_repair_clocks is in the manifest and applied on stage and prod
+    - on stage an exceeding addition opens a clock due 30 days after its date, and passing initial and follow-up verifications close it
+    - two sweeps on one day send each rung exactly once, one leak_reminders row per rung and recipient
+    - an overdue clock emails the site's owner contact once
+    - a PDF export round-trips through R2 with its SHA-256 in x-content-sha256, and the deploy shows the cron on leak-worker
+  gates: []

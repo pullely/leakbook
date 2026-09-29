@@ -10,10 +10,11 @@ import type { Env } from "../env.js";
 import type { ActorContext } from "../router.js";
 import { allowed } from "../authz.js";
 import { recordAudit } from "../audit.js";
-import { nowIso, openDb, todayUtc, type Db } from "../context.js";
+import { clockDeps, nowIso, openDb, todayUtc, type Db } from "../context.js";
+import { applyEventToClock, notifyOpened } from "../clock.js";
 import { errorResponse, notFound, pagedResponse, successResponse, unavailable, validationError } from "../http.js";
 import { actorSubjectUuid, appliancePublicId, eventPublicId, sitePublicId } from "../ids.js";
-import { toPublicEvent, toRateEvent } from "../present.js";
+import { toPublicClock, toPublicEvent, toRateEvent } from "../present.js";
 import { statusAfterEvent, validateServiceEvent, validateVoid } from "../validate.js";
 import { readJson } from "./json.js";
 
@@ -97,6 +98,7 @@ export async function handleListEvents(
  * to `appliance` and authorized the caller against its organization.
  */
 export async function logEvent(
+  env: Env,
   body: unknown,
   db: Db,
   requestId: string,
@@ -229,7 +231,26 @@ export async function logEvent(
       occurredAt: now,
     });
   }
-  return successResponse({ event: toPublicEvent(event) }, requestId, 201);
+  // LB3 (design §1.5): the event moves the appliance's repair clock. The event
+  // is already recorded, so a failure here is logged, never turned into a 5xx.
+  let repairClock = null;
+  try {
+    const deps = clockDeps(env, db);
+    const today = todayUtc();
+    const moved = await applyEventToClock(
+      deps,
+      appliance,
+      event,
+      { type: actor.subjectType, id: actor.subjectId },
+      requestId,
+      now,
+    );
+    if (moved.opened) await notifyOpened(deps, moved.opened, today, now, requestId);
+    repairClock = moved.clock ? toPublicClock(moved.clock, today) : null;
+  } catch {
+    console.warn(JSON.stringify({ level: "warn", msg: "leak clock update failed", requestId }));
+  }
+  return successResponse({ event: toPublicEvent(event), repairClock }, requestId, 201);
 }
 
 export async function handleCreateEvent(
@@ -248,7 +269,7 @@ export async function handleCreateEvent(
   try {
     const appliance = await db.leak.getAppliance(orgId, applianceId);
     if (!appliance) return notFound(requestId);
-    return await logEvent(parsed.body, db, requestId, actor, appliance);
+    return await logEvent(env, parsed.body, db, requestId, actor, appliance);
   } catch {
     return unavailable(requestId);
   } finally {

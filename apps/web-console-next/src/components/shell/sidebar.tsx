@@ -10,6 +10,7 @@ import {
   ChevronRight,
   FolderKanban,
   Store,
+  AlarmClock,
   Boxes,
   KeyRound,
   Settings,
@@ -36,6 +37,7 @@ import { SidebarFind } from "./sidebar-find";
 
 const ICONS: Record<string, LucideIcon> = {
   Store,
+  AlarmClock,
   Building2,
   FolderKanban,
   Boxes,

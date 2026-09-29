@@ -165,6 +165,14 @@ export const LEAK_EVENT_TYPES = [
   "leak.event.logged",
   "leak.event.voided",
   "leak.threshold.exceeded",
+  "leak.clock.opened",
+  "leak.clock.verified",
+  "leak.clock.closed",
+  "leak.clock.overdue",
+  "leak.clock.suspended",
+  "leak.clock.resumed",
+  "leak.clock.updated",
+  "leak.export.created",
 ] as const;
 export type LeakEventType = (typeof LEAK_EVENT_TYPES)[number];
 
@@ -367,12 +375,16 @@ export interface GetApplianceResponse {
   events: PublicServiceEvent[];
   /** LB2: for the live preview. */
   rateHistory: RateHistoryEvent[];
+  /** LB3: the appliance's running repair clock (open, overdue or suspended), if any. */
+  repairClock: PublicRepairClock | null;
 }
 export interface ListServiceEventsResponse {
   events: PublicServiceEvent[];
 }
 export interface ServiceEventResponse {
   event: PublicServiceEvent;
+  /** LB3, on POST: the appliance's repair clock after this event (opened, verified, closed…), if any. */
+  repairClock?: PublicRepairClock | null;
 }
 /** GET /v1/qr/{token} — what a scanned label opens. */
 export interface ResolveQrResponse {
@@ -382,6 +394,8 @@ export interface ResolveQrResponse {
   events: PublicServiceEvent[];
   /** LB2: for the live preview on the phone page. */
   rateHistory: RateHistoryEvent[];
+  /** LB3: the running repair clock, for the phone page's banner. */
+  repairClock: PublicRepairClock | null;
 }
 
 /** GET /v1/organizations/{org}/appliances/{apl}/leak-rate (LB2). */
@@ -402,4 +416,61 @@ export interface LeakRateResponse {
     percentBp: number;
     chronic: boolean;
   }[];
+}
+
+// ── LB3: the repair clock and the exports ──────────────────
+
+export interface PublicRepairClock {
+  id: string;
+  orgId: string;
+  siteId: string;
+  applianceId: string;
+  applianceName: string;
+  siteName: string;
+  /** The addition whose rate exceeded the threshold. */
+  openedByEventId: string;
+  openedOn: string;
+  leakRateBp: number;
+  thresholdPct: number;
+  regime: "84.106" | "82.157";
+  shutdownRequired: boolean;
+  repairDueOn: string;
+  initialVerifiedOn: string | null;
+  followupDueOn: string | null;
+  closedOn: string | null;
+  closedReason: "verified" | "retired" | null;
+  status: "open" | "overdue" | "suspended" | "closed";
+  suspendedDays: number;
+  notes: string;
+  /** What the clock is counting down to today, and how many days are left (negative once past). */
+  deadline: { kind: "repair" | "followup"; dueOn: string; daysLeft: number } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListRepairClocksResponse {
+  clocks: PublicRepairClock[];
+}
+export interface RepairClockResponse {
+  clock: PublicRepairClock;
+}
+export interface UpdateRepairClockRequest {
+  /** Industrial process refrigeration only: 120 days instead of 30 (84.106(d)(1)). */
+  shutdownRequired?: boolean;
+  notes?: string;
+}
+export interface RepairClockSweepResponse {
+  report: { today: string; clocks: number; sent: number; alreadySent: number; deferred: number; overdue: number };
+}
+
+export interface PublicLeakExport {
+  id: string;
+  orgId: string;
+  siteId: string;
+  sha256: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+export interface LeakExportResponse {
+  export: PublicLeakExport;
 }

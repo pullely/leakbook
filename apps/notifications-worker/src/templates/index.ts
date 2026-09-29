@@ -169,10 +169,88 @@ const renderInvitationAccepted: TemplateRenderer = (data, opts) => {
   return { subject, html, text };
 };
 
+/**
+ * Leakbook's repair clock (LB3). One renderer per message: the clock opened,
+ * a reminder rung (14 / 7 / 3 / 1 / 0 days before the deadline), the deadline
+ * missed (to the contractor's admins), and the escalation to the site's owner
+ * contact. `templateData` carries the appliance and site names, the rate, and
+ * the dates; nothing else.
+ */
+function leakDaysPhrase(days: number): string {
+  if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} overdue`;
+  if (days === 0) return "due today";
+  return `due in ${days} day${days === 1 ? "" : "s"}`;
+}
+
+type LeakClockMessage = "opened" | "reminder" | "overdue" | "escalation";
+
+function leakClockRenderer(message: LeakClockMessage): TemplateRenderer {
+  return (data, opts) => {
+    const appliance = str(data, "applianceName") || "An appliance";
+    const site = str(data, "siteName");
+    const where = site ? `${appliance} at ${site}` : appliance;
+    const rate = str(data, "leakRate");
+    const threshold = str(data, "thresholdPct");
+    const regime = str(data, "regime");
+    const openedOn = str(data, "openedOn");
+    const dueOn = str(data, "dueOn");
+    const kind = str(data, "deadlineKind") === "followup" ? "follow-up verification test" : "repair";
+    const days = Number(data.daysLeft ?? 0);
+    const phrase = leakDaysPhrase(Number.isFinite(days) ? days : 0);
+    const brand = opts.brandName ?? "";
+    const rule = regime ? `40 CFR ${regime}` : "the leak-repair rule";
+
+    let subject: string;
+    let title: string;
+    let lead: string;
+    let tail: string;
+    switch (message) {
+      case "opened":
+        subject = `Repair clock started: ${where}`;
+        title = "A leak repair is now due";
+        lead = `${where} leaked at ${rate} a year on ${openedOn}, over its ${threshold} % threshold. Under ${rule} the leak must be repaired by ${dueOn}.`;
+        tail = "Log the repair, then the initial and follow-up verification tests, from the unit's QR label. The clock closes when the follow-up test passes.";
+        break;
+      case "reminder":
+        subject = `${kind === "repair" ? "Repair" : "Follow-up test"} ${phrase}: ${where}`;
+        title = kind === "repair" ? "Repair deadline approaching" : "Follow-up test deadline approaching";
+        lead = `The ${kind} on ${where} is ${phrase} (${dueOn}). It leaked at ${rate} against a ${threshold} % threshold on ${openedOn}.`;
+        tail = "Once it is logged from the unit's label, the remaining reminders stop.";
+        break;
+      case "overdue":
+        subject = `Overdue: ${kind} on ${where}`;
+        title = "Leak repair deadline missed";
+        lead = `The ${kind} on ${where} was due ${dueOn} and has not been logged. The leak (${rate}, threshold ${threshold} %) was found on ${openedOn}.`;
+        tail = `A missed deadline under ${rule} may need to be reported. The site's owner contact has been told as well.`;
+        break;
+      default:
+        subject = `Leak repair overdue at ${site || "your site"}`;
+        title = "A leak repair at your site is overdue";
+        lead = `Your service contractor found a leak on ${appliance}${site ? ` at ${site}` : ""} on ${openedOn} (${rate} a year, over the ${threshold} % threshold). The ${kind} was due ${dueOn} and has not been recorded yet.`;
+        tail = `As the owner or operator you are responsible for the repair under ${rule}. Please contact your contractor.`;
+    }
+
+    const text = [lead, "", tail].join("\n");
+    const html = htmlShell(
+      escapeHtml(title),
+      [
+        `<p style="margin:0 0 16px;font-size:14px;">${escapeHtml(lead)}</p>`,
+        `<p style="margin:0;font-size:13px;color:#6b6b80;">${escapeHtml(tail)}</p>`,
+      ].join(""),
+      escapeHtml(brand ? `Sent by ${brand}` : "This is an automated reminder."),
+    );
+    return { subject: brand ? `[${brand}] ${subject}` : subject, html, text };
+  };
+}
+
 const TEMPLATES: Record<string, TemplateRenderer> = {
   "auth.magic_link": renderMagicLink,
   "invitation.created": renderInvitationCreated,
   "invitation.accepted": renderInvitationAccepted,
+  "leak.clock.opened": leakClockRenderer("opened"),
+  "leak.clock.reminder": leakClockRenderer("reminder"),
+  "leak.clock.overdue": leakClockRenderer("overdue"),
+  "leak.clock.escalation": leakClockRenderer("escalation"),
 };
 
 /**
