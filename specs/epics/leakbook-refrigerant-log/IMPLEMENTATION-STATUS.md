@@ -8,7 +8,8 @@ the code departed from `design.md`.
 | LB0 — the spec | ✅ Landed; `orun spec push` @7383fcf6 | #9 |
 | LB1 — the phone-first log | ✅ Landed; deploy run 35893919231 fully green (attempt 3, 66/66); stage smoke 33/33, prod 401s | #10 |
 | LB2 — the leak-rate engine | ✅ Landed; deploy run 36619373153 fully green (24/24, first attempt); stage smoke 18/18 (W1 → 4056 bp exceeds, W3 → 2000 bp does not, 409, 422) | #11 |
-| LB3 — the repair clock, reminders and the PDF | In review | (this PR) |
+| LB3 — the repair clock, reminders and the PDF | ✅ Landed. Deploy runs 36622072596 (34/34) and 36623957173 (8/8, the admin-recipient fix) fully green; stage smoke all green; the cron `0 14 * * *` is registered on stage and prod | #12, #13 |
+| Hardening + shipped record | identity-worker's public hostname closed (trap 37) | (this PR) |
 
 ## Departures from the design
 
@@ -105,7 +106,44 @@ save is the record, and the form shows it once the server answers.
 - The CSV is streamed one appliance at a time. A cell that starts with
   `= + - @` gets a leading `'`, so a spreadsheet does not run it as a formula.
 
+### LB3 — the admins' addresses (fixed in #13)
+
+The LB3 stage smoke found the sweep reaching only the site's owner contact.
+On D1, membership stores the subject as the public id `usr_<32 hex>`, while
+`identity_users.id` is the UUID, so the join to the admins' email addresses
+matched nothing. The LB3 tests had seeded UUIDs on both sides. #13 matches
+both forms, and the test seed now stores `usr_` subjects as D1 does.
+
+### What was verified live
+
+- **Stage (LB2):** W1 returns `leakRateBp 4056`, `thresholdPct 20`,
+  `exceedsThreshold true` (d = 90). W3 returns 2000 bp and `false`. A method
+  change after a rate is 409. Returning more than is held is 422.
+- **Stage (LB3):** W1's addition opens a clock due 2026-06-29. Two sweeps on
+  one day: the first sends the overdue notice to the owner, the escalation to
+  the site contact and a 14-day rung for a second clock, and the second
+  sends nothing. `leak_reminders` has one row per rung and recipient, each
+  with its notification id. Passing initial and follow-up verifications close
+  the clock. A PDF round-trips through R2 with its SHA-256 in
+  `x-content-sha256`, and the CSV lists every event.
+- **Prod:** `/health` 200, and every LB2/LB3 route answers 401
+  unauthenticated. Nobody can sign in to prod until a sending domain exists
+  (LB-H), so nothing authenticated was run there.
+- **Cloudflare:** the schedules API shows `0 14 * * *` on
+  `leakbook-leak-worker-stage` and `-prod`. The buckets
+  `stg-leakbook-exports-stage` and `prod-leakbook-exports-prod` exist.
+
 ## Departures from the baseline
+
+- **identity-worker's public hostname is closed** (`"workers_dev": false` on
+  stage and prod, runbook trap 37). The cirrus template left it on, and some
+  of its routes trust that api-edge already authenticated the caller.
+- **Found, not changed: the D1 database names are swapped.** Every stage
+  worker binds the database named `prod-leakbook-prod`, and every prod worker
+  binds `stg-leakbook-stage`, db-migrate included. The two environments' data
+  are still isolated from each other. Only the names mislead, so anyone
+  querying D1 by name must use the other one. This is baseline wiring and is
+  left for the owner.
 
 - **The trap-16 D1 fix** (`factory/patches/cirrus-d1-fix.patch`, first landed
   in chaseid) is applied in LB1. The baseline's `appendEventWithAudit` and

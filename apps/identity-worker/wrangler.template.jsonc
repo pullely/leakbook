@@ -40,6 +40,10 @@
       }
     },
     "stage": {
+      // Runbook trap 37: reachable only through api-edge's IDENTITY_WORKER
+      // service binding, like every other internal worker. Some routes trust
+      // that api-edge has already authenticated the caller.
+      "workers_dev": false,
       "vars": {
         "ENVIRONMENT": "stage",
         "DEBUG_DELIVERY": "true",
@@ -72,6 +76,10 @@
       ]
     },
     "prod": {
+      // Runbook trap 37: reachable only through api-edge's IDENTITY_WORKER
+      // service binding, like every other internal worker. Some routes trust
+      // that api-edge has already authenticated the caller.
+      "workers_dev": false,
       "vars": {
         "ENVIRONMENT": "prod",
         "DEBUG_DELIVERY": "false",

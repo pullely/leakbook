@@ -67,7 +67,7 @@ on the phone form.
 - on stage: the W1 sequence returns `leakRateBp: 4056`, `thresholdPct: 20`, `exceedsThreshold: true`; the W3 sequence returns `false`
 - a site with a calculated rate refuses a method change with 409
 
-## LB3 — the repair clock, reminders and the PDF
+## LB3 — the repair clock, reminders and the PDF ✅
 
 What makes a missed repair hard to miss, and the record an inspector reads.
 Migration `220_leak_repair_clocks` (design §1.5). An exceeding addition opens a

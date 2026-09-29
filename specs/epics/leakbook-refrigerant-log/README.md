@@ -35,14 +35,14 @@ repair, with the record exportable for an inspector.
 
 | Field | Value |
 |-------|-------|
-| Status | In progress — LB0 (#9), LB1 (#10) and LB2 (#11) landed; LB3 in review |
+| Status | ✅ Shipped — LB0 (#9), LB1 (#10), LB2 (#11) and LB3 (#12, #13) landed, and every final deploy run on `main` is fully green |
 | Cluster | **LB** (LB0–LB3) |
 | Owner(s) | `apps/leak-worker` (sites, appliances, QR labels, the service log, the leak-rate engine, the repair clock and its cron, PDF export) · `apps/api-edge` (the facade) · `packages/db` (migrations `200`–`220`, bounded context `leak`) · `packages/contracts` + `packages/sdk` (the wire) · `infra/terraform/cloudflare-r2` (the export bucket, LB3) · `apps/notifications-worker` (the reminder templates, LB3) · `apps/web-console-next` (the register and the phone pages) |
 | Builds on | `cirrus baseline-v12` — organizations as contractors, members as technicians and office staff, the policy engine for who may edit, magic-link sign-in for the phone pages, `notifications-worker` for email, the audit trail in `events-worker`, api-edge rate limiting |
 | Changes | Adds one bounded context (`leak`), one worker, one R2 bucket per environment (LB3) and one cron trigger (LB3); turns the Solo profile off (several technicians per contractor); every baseline context is reused, none is modified beyond new actions, templates and subject prefixes |
 | Decisions locked | (1) A contractor is a cirrus organization; a customer site is a `leak_sites` row inside it, not a second tenancy axis. (2) Refrigerant quantities are integer ounces; the leak rate is computed from the service-event rows by the server, never typed, and compared to its threshold exactly (design §2). (3) The applicable regime and threshold come from the appliance's refrigerant class, full charge and category, per 40 CFR 84.106(a) and (c)(2) (and 82.157 for ODS-only appliances ≥ 50 lb). (4) A QR label carries an unguessable token, not an id; resolving it requires a signed-in member of the owning organization. (5) The repair clock is a row created when an addition exceeds the threshold; its 30-day deadline is `addition date + 30` (120 with an industrial-process shutdown) and every reminder rung is claimed with `INSERT … RETURNING` before it is sent. |
 | Gate | LB1 is the first user-visible change (the register and the phone log). LB2 is the compliance answer. LB3 is what makes a missed repair hard to miss, and the export an inspector reads. |
-| Shipped as | |
+| Shipped as | `leak-worker` behind api-edge on stage and prod (`https://leakbook-api-edge-{stage,prod}.nexo-7be.workers.dev`), with the console at `https://leakbook-web-console-next-{stage,prod}.nexo-7be.workers.dev`. It covers sites, appliances, QR labels and the phone log; the exact leak rate on every addition; the 30-day repair clock with its daily `0 14 * * *` reminder and escalation sweep; and inspection PDFs in R2 (`stg-`/`prod-leakbook-exports-*`) plus a CSV. Migrations `200`–`220` are applied on both environments. Prod sign-in still needs a sending domain (LB-H). |
 
 ## Read order
 
