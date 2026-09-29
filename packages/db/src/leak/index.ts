@@ -9,6 +9,7 @@ export type {
   LeakSiteFields,
   ListEventsPage,
   ServiceEvent,
+  ServiceEventRate,
 } from "./types.js";
 
 export { createLeakRepository } from "./repository.js";

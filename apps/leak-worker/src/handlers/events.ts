@@ -1,4 +1,10 @@
-import { SERVICE_EVENT_KIND_LABELS } from "@saas/contracts/leak";
+import {
+  SERVICE_EVENT_KIND_LABELS,
+  type ApplianceCategory,
+  type LeakRateMethod,
+  type RefrigerantClass,
+} from "@saas/contracts/leak";
+import { addCalendarDays, calculateLeakRate, formatRateBp, heldBalanceOz } from "@saas/contracts/leak-rate";
 import type { Appliance, ApplianceFields } from "@saas/db/leak";
 import type { Env } from "../env.js";
 import type { ActorContext } from "../router.js";
@@ -7,11 +13,13 @@ import { recordAudit } from "../audit.js";
 import { nowIso, openDb, todayUtc, type Db } from "../context.js";
 import { errorResponse, notFound, pagedResponse, successResponse, unavailable, validationError } from "../http.js";
 import { actorSubjectUuid, appliancePublicId, eventPublicId, sitePublicId } from "../ids.js";
-import { toPublicEvent } from "../present.js";
+import { toPublicEvent, toRateEvent } from "../present.js";
 import { statusAfterEvent, validateServiceEvent, validateVoid } from "../validate.js";
 import { readJson } from "./json.js";
 
 const PAGE_SIZE = 50;
+/** One day more than the 365 the arithmetic can reach (design §2). */
+const RATE_LOOKBACK_DAYS = 366;
 
 function applianceFields(a: Appliance): ApplianceFields {
   return {
@@ -104,6 +112,41 @@ export async function logEvent(
   const now = nowIso();
   const orgId = appliance.orgId;
 
+  const site = await db.leak.getSite(orgId, appliance.siteId);
+  if (!site) return notFound(requestId);
+
+  // LB2 (design §2): the arithmetic never looks further back than 365 days
+  // (d is capped at 365; the rolling window and the held balance are 365
+  // days), so one day more than that is the whole history it needs.
+  const history = (
+    await db.leak.listEventsInLogOrder(orgId, appliance.id, addCalendarDays(v.serviceDate, -RATE_LOOKBACK_DAYS))
+  ).filter((e) => e.serviceDate <= v.serviceDate);
+  const prior = history.map(toRateEvent);
+
+  // §2.2: returned refrigerant must have come out of this appliance and still be held.
+  if (v.returnedOz > 0) {
+    const held = heldBalanceOz(prior, v.serviceDate, v.recoveredOz);
+    if (v.returnedOz > held) {
+      const excess = v.returnedOz - held;
+      return validationError(requestId, {
+        returnedOz: [
+          `Only ${held} oz recovered from this appliance in the last 365 days is still held for return; log the other ${excess} oz as refrigerant added, not returned`,
+        ],
+      });
+    }
+  }
+
+  const rate = calculateLeakRate({
+    appliance: {
+      refrigerantClass: appliance.refrigerantClass as RefrigerantClass,
+      category: appliance.category as ApplianceCategory,
+      fullChargeOz: appliance.fullChargeOz,
+    },
+    method: site.leakRateMethod as LeakRateMethod,
+    prior,
+    event: v,
+  });
+
   const event = await db.leak.createServiceEvent({
     id: crypto.randomUUID(),
     orgId,
@@ -113,6 +156,13 @@ export async function logEvent(
     fullChargeOz: appliance.fullChargeOz,
     loggedBy: actorSubjectUuid(actor.subjectId),
     now,
+    leakOz: rate.leakOz,
+    rateMethod: rate.method,
+    rateDays: rate.rateDays,
+    leakRateBp: rate.leakRateBp,
+    regime: rate.regime,
+    thresholdPct: rate.thresholdPct,
+    exceedsThreshold: rate.exceedsThreshold,
   });
 
   const nextStatus = statusAfterEvent(appliance.status, v.kind, v.addedOz);
@@ -120,7 +170,8 @@ export async function logEvent(
     await db.leak.updateAppliance(orgId, appliance.id, { ...applianceFields(appliance), status: nextStatus }, now);
   }
 
-  const leakOz = event.addedOz - event.returnedOz;
+  const leakOz = event.leakOz;
+  const rateText = event.leakRateBp === null ? "" : `; leak rate ${formatRateBp(event.leakRateBp)}`;
   await recordAudit(db.executor, {
     type: "leak.event.logged",
     orgId,
@@ -131,7 +182,7 @@ export async function logEvent(
     subjectName: `${appliance.name} — ${event.serviceDate}`,
     description: `Logged ${SERVICE_EVENT_KIND_LABELS[v.kind].toLowerCase()} on "${appliance.name}" for ${event.serviceDate}${
       event.addedOz > 0 ? ` (+${event.addedOz} oz${event.returnedOz > 0 ? `, ${event.returnedOz} oz returned` : ""})` : ""
-    }`,
+    }${rateText}`,
     payload: {
       eventId: eventPublicId(event.id),
       applianceId: appliancePublicId(appliance.id),
@@ -145,9 +196,39 @@ export async function logEvent(
       fullChargeOz: event.fullChargeOz,
       loggedVia: event.loggedVia,
       applianceStatus: nextStatus,
+      rateMethod: event.rateMethod,
+      rateDays: event.rateDays,
+      leakRateBp: event.leakRateBp,
+      regime: event.regime,
+      thresholdPct: event.thresholdPct,
+      exceedsThreshold: event.exceedsThreshold,
     },
     occurredAt: now,
   });
+  if (event.exceedsThreshold === true && event.leakRateBp !== null && event.thresholdPct !== null) {
+    await recordAudit(db.executor, {
+      type: "leak.threshold.exceeded",
+      orgId,
+      actor: { type: actor.subjectType, id: actor.subjectId },
+      requestId,
+      subjectKind: "leak_service_event",
+      subjectId: event.id,
+      subjectName: `${appliance.name} — ${event.serviceDate}`,
+      description: `"${appliance.name}" is leaking at ${formatRateBp(event.leakRateBp)}, over its ${event.thresholdPct} % threshold (40 CFR ${event.regime})`,
+      payload: {
+        eventId: eventPublicId(event.id),
+        applianceId: appliancePublicId(appliance.id),
+        siteId: sitePublicId(appliance.siteId),
+        serviceDate: event.serviceDate,
+        leakRateBp: event.leakRateBp,
+        thresholdPct: event.thresholdPct,
+        regime: event.regime,
+        rateMethod: event.rateMethod,
+        rateDays: event.rateDays,
+      },
+      occurredAt: now,
+    });
+  }
   return successResponse({ event: toPublicEvent(event) }, requestId, 201);
 }
 

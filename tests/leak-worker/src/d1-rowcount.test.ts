@@ -106,12 +106,25 @@ describe("trap 22: rowCount after a write on D1", () => {
       loggedBy: null,
       loggedVia: "console",
       now: NOW,
+      leakOz: 64,
+      rateMethod: "annualizing",
+      rateDays: 90,
+      leakRateBp: 4056,
+      regime: "84.106",
+      thresholdPct: 20,
+      exceedsThreshold: true,
     });
+    expect(event).toMatchObject({ leakRateBp: 4056, exceedsThreshold: true, rateDays: 90 });
+    // LB2: a site's method is fixed while a non-voided rate exists there.
+    expect(await repo.siteHasCalculatedRate(ORG, site.id)).toBe(true);
+    expect(await repo.siteHasCalculatedRate(OTHER, site.id)).toBe(false);
     expect(await repo.voidServiceEvent(OTHER, appliance.id, event.id, "x", null, NOW)).toBeNull();
     const first = await repo.voidServiceEvent(ORG, appliance.id, event.id, "wrong unit", null, NOW);
     expect(first?.voidReason).toBe("wrong unit");
     expect(await repo.voidServiceEvent(ORG, appliance.id, event.id, "again", null, NOW)).toBeNull();
     expect((await repo.getServiceEvent(ORG, appliance.id, event.id))?.voidReason).toBe("wrong unit");
+    expect(await repo.siteHasCalculatedRate(ORG, site.id)).toBe(false);
+    expect(await repo.latestRatedEvent(ORG, appliance.id)).toBeNull();
   });
 
   it("the schema holds the record's invariants", async () => {

@@ -164,6 +164,7 @@ export const LEAK_EVENT_TYPES = [
   "leak.appliance.qr_rotated",
   "leak.event.logged",
   "leak.event.voided",
+  "leak.threshold.exceeded",
 ] as const;
 export type LeakEventType = (typeof LEAK_EVENT_TYPES)[number];
 
@@ -261,6 +262,30 @@ export interface PublicServiceEvent {
   voidedAt: string | null;
   voidReason: string | null;
   createdAt: string;
+  // LB2 — computed once, at insert, from the rows already in the log (design §2.6).
+  // All null when no rate was calculated for this event (84.106(b) exceptions, no leak).
+  rateMethod: LeakRateMethod | null;
+  /** Annualizing d (1…365); null for the rolling average. */
+  rateDays: number | null;
+  /** Hundredths of a percent: 4056 = 40.56 %. Display only — the verdict never reads it. */
+  leakRateBp: number | null;
+  regime: "84.106" | "82.157" | null;
+  thresholdPct: number | null;
+  /** Strictly over the threshold; null when the appliance is not subject. */
+  exceedsThreshold: boolean | null;
+}
+
+/**
+ * LB2: the compact log the console's live preview runs the leak-rate module
+ * over — non-voided events from the last 400 days, in log order.
+ */
+export interface RateHistoryEvent {
+  serviceDate: string;
+  kind: ServiceEventKind;
+  addedOz: number;
+  recoveredOz: number;
+  returnedOz: number;
+  verificationPassed: boolean | null;
 }
 
 // ── Requests ───────────────────────────────────────────────
@@ -340,6 +365,8 @@ export interface GetApplianceResponse {
   appliance: PublicAppliance;
   site: PublicLeakSite;
   events: PublicServiceEvent[];
+  /** LB2: for the live preview. */
+  rateHistory: RateHistoryEvent[];
 }
 export interface ListServiceEventsResponse {
   events: PublicServiceEvent[];
@@ -353,4 +380,26 @@ export interface ResolveQrResponse {
   site: PublicLeakSite;
   appliance: PublicAppliance;
   events: PublicServiceEvent[];
+  /** LB2: for the live preview on the phone page. */
+  rateHistory: RateHistoryEvent[];
+}
+
+/** GET /v1/organizations/{org}/appliances/{apl}/leak-rate (LB2). */
+export interface LeakRateResponse {
+  applicability: {
+    regime: "84.106" | "82.157" | null;
+    thresholdPct: number | null;
+    reason: string;
+  };
+  method: LeakRateMethod;
+  /** The latest non-voided event with a calculated rate, or null. */
+  latest: PublicServiceEvent | null;
+  /** 84.106(j): this calendar year and the previous one (reportable by 1 March). */
+  chronic: {
+    year: number;
+    leakOz: number;
+    fullChargeOz: number;
+    percentBp: number;
+    chronic: boolean;
+  }[];
 }

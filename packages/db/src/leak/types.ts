@@ -123,9 +123,29 @@ export interface ServiceEvent {
   voidReason: string | null;
   voidedBy: string | null;
   createdAt: string;
+  /** LB2 (210_leak_rates). addedOz − returnedOz. */
+  leakOz: number;
+  /** The rest are null unless a rate was calculated for this event at insert. */
+  rateMethod: string | null;
+  rateDays: number | null;
+  leakRateBp: number | null;
+  regime: string | null;
+  thresholdPct: number | null;
+  exceedsThreshold: boolean | null;
 }
 
-export interface CreateServiceEventInput {
+/** The computed columns of 210_leak_rates, written once at insert. */
+export interface ServiceEventRate {
+  leakOz: number;
+  rateMethod: string | null;
+  rateDays: number | null;
+  leakRateBp: number | null;
+  regime: string | null;
+  thresholdPct: number | null;
+  exceedsThreshold: boolean | null;
+}
+
+export interface CreateServiceEventInput extends ServiceEventRate {
   id: string;
   orgId: string;
   siteId: string;
@@ -169,6 +189,16 @@ export interface LeakRepository {
   createServiceEvent(input: CreateServiceEventInput): Promise<ServiceEvent>;
   getServiceEvent(orgId: string, applianceId: string, eventId: string): Promise<ServiceEvent | null>;
   listServiceEvents(orgId: string, applianceId: string, page: ListEventsPage): Promise<ServiceEvent[]>;
+  /**
+   * LB2: the appliance's events in LOG ORDER (service date, then creation,
+   * ascending), voided ones included and flagged — what the leak-rate
+   * arithmetic reads. `since` (YYYY-MM-DD) bounds the scan for previews.
+   */
+  listEventsInLogOrder(orgId: string, applianceId: string, since?: string): Promise<ServiceEvent[]>;
+  /** LB2: whether any non-voided event at the site carries a calculated rate (the method is then fixed). */
+  siteHasCalculatedRate(orgId: string, siteId: string): Promise<boolean>;
+  /** LB2: the latest non-voided event with a calculated rate, in log order. */
+  latestRatedEvent(orgId: string, applianceId: string): Promise<ServiceEvent | null>;
   /** Null when the event does not exist in this org/appliance or is already voided. */
   voidServiceEvent(
     orgId: string,

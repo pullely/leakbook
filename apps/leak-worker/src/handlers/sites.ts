@@ -4,7 +4,7 @@ import type { ActorContext } from "../router.js";
 import { allowed } from "../authz.js";
 import { recordAudit } from "../audit.js";
 import { nowIso, openDb } from "../context.js";
-import { notFound, successResponse, unavailable, validationError } from "../http.js";
+import { errorResponse, notFound, successResponse, unavailable, validationError } from "../http.js";
 import { actorSubjectUuid, sitePublicId } from "../ids.js";
 import { toPublicAppliance, toPublicSite } from "../present.js";
 import { validateSiteBody } from "../validate.js";
@@ -119,6 +119,20 @@ export async function handleUpdateSite(
     if (!current) return notFound(requestId);
     const validation = validateSiteBody(parsed.body, current);
     if (!validation.valid) return validationError(requestId, validation.fields);
+    // LB2 (design §2.4): one method per operating facility, fixed once a rate
+    // exists there; 84.106(b)(3) allows a switch only on acquiring a facility,
+    // which the office records as a new site.
+    if (
+      validation.value.leakRateMethod !== current.leakRateMethod &&
+      (await db.leak.siteHasCalculatedRate(orgId, siteId))
+    ) {
+      return errorResponse(
+        "conflict",
+        "A leak rate has been calculated at this site, so its method can no longer change; a newly acquired facility is a new site",
+        409,
+        requestId,
+      );
+    }
     const site = await db.leak.updateSite(orgId, siteId, validation.value, now);
     if (!site) return notFound(requestId);
 
