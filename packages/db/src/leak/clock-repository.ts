@@ -358,7 +358,16 @@ export function createLeakClockRepository(executor: SqlExecutor): LeakClockRepos
            FROM membership_role_assignments ra
            JOIN membership_organization_members m
              ON m.org_id = ra.org_id AND m.subject_id = ra.subject_id AND m.status = 'active'
-           JOIN identity_users u ON u.id = ra.subject_id AND u.status = 'active'
+           -- Membership stores the PUBLIC subject id ("usr_<32 hex>") on D1,
+           -- identity_users the UUID: match either form (an index lookup on u.id).
+           JOIN identity_users u
+             ON u.id IN (
+                  ra.subject_id,
+                  lower(substr(ra.subject_id, 5, 8) || '-' || substr(ra.subject_id, 13, 4) || '-' ||
+                        substr(ra.subject_id, 17, 4) || '-' || substr(ra.subject_id, 21, 4) || '-' ||
+                        substr(ra.subject_id, 25, 12))
+                )
+            AND u.status = 'active'
           WHERE ra.org_id = $1 AND ra.role IN ('owner','admin') AND ra.scope_kind = 'organization'
             AND ra.revoked_at IS NULL
           ORDER BY ra.created_at ASC, ra.id ASC
