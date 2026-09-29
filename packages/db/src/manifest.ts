@@ -192,5 +192,14 @@ export const manifest: MigrationManifest = {
       description:
         "Refrigerant log foundation (LB1) — a contractor's customer sites (the leak-rate method per operating facility), the refrigerant-containing appliances at each (one per circuit; refrigerant, class, category, full charge in integer ounces, QR token), and the immutable service-event log (ounces added, recovered and returned; voided, never edited)",
     },
+    {
+      id: "210_leak_rates",
+      context: "leak",
+      path: "210_leak_rates/up.sql",
+      checksum:
+        "6cc8dd7f300f4e5ac93e840fd3537714f928810267a3c87e940c8da30b92f777",
+      description:
+        "The leak-rate engine (LB2) — leak_oz, rate_method, rate_days, leak_rate_bp, regime, threshold_pct and exceeds_threshold on each service event, computed once at insert (40 CFR 84.102 / 84.106(b)); a partial index for the site's has-a-rate check",
+    },
   ],
 };

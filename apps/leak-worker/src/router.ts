@@ -4,6 +4,7 @@ import { handleCreateSite, handleGetSite, handleListSites, handleUpdateSite } fr
 import {
   handleCreateAppliance,
   handleGetAppliance,
+  handleGetLeakRate,
   handleRotateQrToken,
   handleUpdateAppliance,
 } from "./handlers/appliances.js";
@@ -47,6 +48,7 @@ const SITE_RE = /^\/v1\/organizations\/([^/]+)\/sites\/([^/]+)$/;
 const SITE_APPLIANCES_RE = /^\/v1\/organizations\/([^/]+)\/sites\/([^/]+)\/appliances$/;
 const APPLIANCE_RE = /^\/v1\/organizations\/([^/]+)\/appliances\/([^/]+)$/;
 const APPLIANCE_QR_RE = /^\/v1\/organizations\/([^/]+)\/appliances\/([^/]+)\/qr-token$/;
+const APPLIANCE_LEAK_RATE_RE = /^\/v1\/organizations\/([^/]+)\/appliances\/([^/]+)\/leak-rate$/;
 const APPLIANCE_EVENTS_RE = /^\/v1\/organizations\/([^/]+)\/appliances\/([^/]+)\/events$/;
 const APPLIANCE_EVENT_VOID_RE = /^\/v1\/organizations\/([^/]+)\/appliances\/([^/]+)\/events\/([^/]+)\/void$/;
 // The label lane: the token is the key, the org is found from it.
@@ -90,6 +92,14 @@ async function routeApi(request: Request, env: Env, requestId: string, path: str
     return method === "GET"
       ? handleListEvents(request, env, requestId, actor, org, apl)
       : handleCreateEvent(request, env, requestId, actor, org, apl);
+  }
+  if ((m = path.match(APPLIANCE_LEAK_RATE_RE))) {
+    const org = parseOrgPublicId(m[1]!);
+    const apl = parseAppliancePublicId(m[2]!);
+    if (!org || !apl) return notFound(requestId);
+    if (method !== "GET") return methodNotAllowed(requestId);
+    if (!actor) return unauthenticated(requestId);
+    return handleGetLeakRate(env, requestId, actor, org, apl);
   }
   if ((m = path.match(APPLIANCE_QR_RE))) {
     const org = parseOrgPublicId(m[1]!);

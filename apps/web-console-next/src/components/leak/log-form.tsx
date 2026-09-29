@@ -4,7 +4,9 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { STORAGE_PREFIX } from "@/lib/app-config";
-import type { LogServiceEventRequest, ServiceEventKind } from "@saas/contracts/leak";
+import type { LogServiceEventRequest, PublicServiceEvent, ServiceEventKind } from "@saas/contracts/leak";
+import type { LeakRateResult } from "@saas/contracts/leak-rate";
+import { RateVerdict, previewRate, type RatePreviewInput } from "@/components/leak/rate";
 import { SERVICE_EVENT_KIND_LABELS, VERIFICATION_KINDS, formatOunces, toOunces } from "@saas/contracts/leak";
 
 const TECHNICIAN_KEY = `${STORAGE_PREFIX}.technician-name`;
@@ -117,6 +119,23 @@ export interface LogFormResult {
   ok: boolean;
   message?: string;
   fields?: Record<string, string[]>;
+  /** The saved event, with the rate the server computed (LB2). */
+  event?: PublicServiceEvent;
+}
+
+/** The server's stored verdict, in the preview's shape. */
+function storedResult(e: PublicServiceEvent): LeakRateResult {
+  return {
+    leakOz: e.leakOz,
+    calculated: e.leakRateBp !== null,
+    method: e.rateMethod,
+    rateOz: null,
+    rateDays: e.rateDays,
+    leakRateBp: e.leakRateBp,
+    regime: e.regime,
+    thresholdPct: e.thresholdPct,
+    exceedsThreshold: e.exceedsThreshold,
+  };
 }
 
 /**
@@ -127,9 +146,12 @@ export interface LogFormResult {
 export function LogForm({
   onSubmit,
   compact = false,
+  preview,
 }: {
   onSubmit: (body: LogServiceEventRequest) => Promise<LogFormResult>;
   compact?: boolean;
+  /** LB2: the appliance, its site's method and recent history, for the live leak-rate preview. */
+  preview?: RatePreviewInput | undefined;
 }) {
   const [kind, setKind] = React.useState<ServiceEventKind>("service");
   const [serviceDate, setServiceDate] = React.useState(localToday());
@@ -144,6 +166,7 @@ export function LogForm({
   const [busy, setBusy] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string[]>>({});
   const [message, setMessage] = React.useState<string | null>(null);
+  const [saved, setSaved] = React.useState<PublicServiceEvent | null>(null);
 
   React.useEffect(() => setTechnician(readTechnician()), []);
 
@@ -151,10 +174,15 @@ export function LogForm({
   const addedOz = quantityToOunces(added);
   const recoveredOz = quantityToOunces(recovered);
   const returnedOz = quantityToOunces(returned);
+  const live =
+    preview && addedOz !== null && recoveredOz !== null && returnedOz !== null && addedOz > 0 && serviceDate
+      ? previewRate(preview, { serviceDate, kind, addedOz, recoveredOz, returnedOz })
+      : null;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
+    setSaved(null);
     if (addedOz === null || recoveredOz === null || returnedOz === null) {
       setMessage("Check the quantities: whole pounds and 0–15 ounces.");
       return;
@@ -184,6 +212,7 @@ export function LogForm({
       return;
     }
     writeTechnician(technician.trim());
+    setSaved(r.event ?? null);
     setErrors({});
     setAdded(EMPTY);
     setRecovered(EMPTY);
@@ -313,6 +342,23 @@ export function LogForm({
             Notes
           </label>
           <Textarea id="lf-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+      )}
+
+      {live && (
+        <div className="rounded-md border border-dashed p-3" aria-live="polite">
+          <RateVerdict rate={live.rate} prefix="This addition" />
+          {returnedOz !== null && returnedOz > live.heldOz && (
+            <p className="mt-1 text-xs text-destructive">
+              Only {formatOunces(live.heldOz)} recovered from this unit in the last year is held for return; log the rest
+              as refrigerant added.
+            </p>
+          )}
+        </div>
+      )}
+      {saved && (
+        <div className="rounded-md border p-3" role="status">
+          <RateVerdict rate={storedResult(saved)} prefix={`Saved ${saved.serviceDate}`} />
         </div>
       )}
 

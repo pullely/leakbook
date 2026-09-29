@@ -2,11 +2,13 @@ import type { Env } from "../env.js";
 import type { ActorContext } from "../router.js";
 import { allowed } from "../authz.js";
 import { recordAudit } from "../audit.js";
-import { nowIso, openDb, todayUtc } from "../context.js";
+import { nowIso, openDb, previewHistorySince, todayUtc } from "../context.js";
 import { errorResponse, notFound, successResponse, unavailable, validationError } from "../http.js";
 import { actorSubjectUuid, appliancePublicId, generateQrToken, sitePublicId } from "../ids.js";
-import { toPublicAppliance, toPublicEvent, toPublicSite } from "../present.js";
+import { toPublicAppliance, toPublicEvent, toPublicSite, toRateEvent, toRateHistory } from "../present.js";
 import { validateApplianceBody } from "../validate.js";
+import { applicability, chronicLeak } from "@saas/contracts/leak-rate";
+import type { ApplianceCategory, LeakRateMethod, RefrigerantClass } from "@saas/contracts/leak";
 import { readJson } from "./json.js";
 
 /** How many service events the appliance page carries inline, newest first. */
@@ -85,13 +87,19 @@ export async function handleGetAppliance(
   try {
     const appliance = await db.leak.getAppliance(orgId, applianceId);
     if (!appliance) return notFound(requestId);
-    const [site, events] = await Promise.all([
+    const [site, events, history] = await Promise.all([
       db.leak.getSite(orgId, appliance.siteId),
       db.leak.listServiceEvents(orgId, applianceId, { limit: APPLIANCE_EVENTS_INLINE }),
+      db.leak.listEventsInLogOrder(orgId, applianceId, previewHistorySince()),
     ]);
     if (!site) return notFound(requestId);
     return successResponse(
-      { appliance: toPublicAppliance(appliance), site: toPublicSite(site), events: events.map(toPublicEvent) },
+      {
+        appliance: toPublicAppliance(appliance),
+        site: toPublicSite(site),
+        events: events.map(toPublicEvent),
+        rateHistory: toRateHistory(history),
+      },
       requestId,
     );
   } catch {
@@ -194,6 +202,52 @@ export async function handleRotateQrToken(
       occurredAt: now,
     });
     return successResponse({ appliance: toPublicAppliance(appliance) }, requestId);
+  } catch {
+    return unavailable(requestId);
+  } finally {
+    await db.dispose();
+  }
+}
+
+/**
+ * GET /v1/organizations/{org}/appliances/{apl}/leak-rate (LB2) — the
+ * appliance's applicability and threshold today, its latest calculated rate,
+ * and the chronic-leaker flag (84.106(j)) for this calendar year and the last.
+ */
+export async function handleGetLeakRate(
+  env: Env,
+  requestId: string,
+  actor: ActorContext,
+  orgId: string,
+  applianceId: string,
+): Promise<Response> {
+  if (!(await allowed(env, actor, orgId, "leak.read", requestId))) return notFound(requestId);
+  const db = openDb(env);
+  if (!db) return unavailable(requestId);
+  try {
+    const appliance = await db.leak.getAppliance(orgId, applianceId);
+    if (!appliance) return notFound(requestId);
+    const year = Number(todayUtc().slice(0, 4));
+    const [site, latest, events] = await Promise.all([
+      db.leak.getSite(orgId, appliance.siteId),
+      db.leak.latestRatedEvent(orgId, applianceId),
+      db.leak.listEventsInLogOrder(orgId, applianceId, `${year - 1}-01-01`),
+    ]);
+    if (!site) return notFound(requestId);
+    const rateEvents = events.map(toRateEvent);
+    return successResponse(
+      {
+        applicability: applicability({
+          refrigerantClass: appliance.refrigerantClass as RefrigerantClass,
+          category: appliance.category as ApplianceCategory,
+          fullChargeOz: appliance.fullChargeOz,
+        }),
+        method: site.leakRateMethod as LeakRateMethod,
+        latest: latest ? toPublicEvent(latest) : null,
+        chronic: [year, year - 1].map((y) => chronicLeak(rateEvents, y, appliance.fullChargeOz)),
+      },
+      requestId,
+    );
   } catch {
     return unavailable(requestId);
   } finally {

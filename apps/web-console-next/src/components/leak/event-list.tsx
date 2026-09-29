@@ -6,10 +6,16 @@ import { Button } from "@/components/ui/button";
 import type { PublicServiceEvent } from "@saas/contracts/leak";
 import { SERVICE_EVENT_KIND_LABELS, formatOunces } from "@saas/contracts/leak";
 import type { ApiResult } from "@/lib/api";
+import { EventRate } from "@/components/leak/rate";
 
 /** Adapt a `wrap` result into the log form's result shape. */
-export function toFormResult(r: ApiResult<unknown>): { ok: boolean; message?: string; fields?: Record<string, string[]> } {
-  if (r.ok) return { ok: true };
+export function toFormResult(
+  r: ApiResult<unknown>,
+): { ok: boolean; message?: string; fields?: Record<string, string[]>; event?: PublicServiceEvent } {
+  if (r.ok) {
+    const event = (r.data as { event?: PublicServiceEvent } | undefined)?.event;
+    return event ? { ok: true, event } : { ok: true };
+  }
   const details = (r.error as { details?: { fields?: Record<string, string[]> } }).details;
   return { ok: false, message: r.error.message, fields: details?.fields ?? {} };
 }
@@ -69,6 +75,7 @@ function EventRow({
         <span className="text-xs text-muted-foreground">{e.technicianName}</span>
       </div>
       <Quantities e={e} />
+      <EventRate e={e} />
       {(e.component || e.workPerformed) && (
         <div className="text-xs text-muted-foreground">{[e.component, e.workPerformed].filter(Boolean).join(" — ")}</div>
       )}

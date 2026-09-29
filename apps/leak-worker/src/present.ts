@@ -7,10 +7,12 @@ import type {
   PublicAppliance,
   PublicLeakSite,
   PublicServiceEvent,
+  RateHistoryEvent,
   RefrigerantClass,
   ServiceEventKind,
   ServiceEventSource,
 } from "@saas/contracts/leak";
+import type { RateEvent } from "@saas/contracts/leak-rate";
 import type { Appliance, LeakSite, ServiceEvent } from "@saas/db/leak";
 import { appliancePublicId, eventPublicId, orgPublicId, sitePublicId } from "./ids.js";
 
@@ -78,7 +80,7 @@ export function toPublicEvent(e: ServiceEvent): PublicServiceEvent {
     addedOz: e.addedOz,
     recoveredOz: e.recoveredOz,
     returnedOz: e.returnedOz,
-    leakOz: e.addedOz - e.returnedOz,
+    leakOz: e.leakOz,
     fullChargeOz: e.fullChargeOz,
     verificationPassed: e.verificationPassed,
     notes: e.notes,
@@ -87,5 +89,38 @@ export function toPublicEvent(e: ServiceEvent): PublicServiceEvent {
     voidedAt: e.voidedAt,
     voidReason: e.voidReason,
     createdAt: e.createdAt,
+    rateMethod: e.rateMethod as LeakRateMethod | null,
+    rateDays: e.rateDays,
+    leakRateBp: e.leakRateBp,
+    regime: e.regime as PublicServiceEvent["regime"],
+    thresholdPct: e.thresholdPct,
+    exceedsThreshold: e.exceedsThreshold,
   };
+}
+
+/** The leak-rate module's view of a stored event (voided ones flagged, so it skips them). */
+export function toRateEvent(e: ServiceEvent): RateEvent {
+  return {
+    serviceDate: e.serviceDate,
+    kind: e.kind as ServiceEventKind,
+    addedOz: e.addedOz,
+    recoveredOz: e.recoveredOz,
+    returnedOz: e.returnedOz,
+    verificationPassed: e.verificationPassed,
+    voided: e.voidedAt !== null,
+  };
+}
+
+/** The live preview's history: non-voided events, log order. */
+export function toRateHistory(events: ServiceEvent[]): RateHistoryEvent[] {
+  return events
+    .filter((e) => e.voidedAt === null)
+    .map((e) => ({
+      serviceDate: e.serviceDate,
+      kind: e.kind as ServiceEventKind,
+      addedOz: e.addedOz,
+      recoveredOz: e.recoveredOz,
+      returnedOz: e.returnedOz,
+      verificationPassed: e.verificationPassed,
+    }));
 }

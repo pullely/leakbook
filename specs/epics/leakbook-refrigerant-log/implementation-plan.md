@@ -11,7 +11,7 @@ hours, and every CI job that reads a brokered Cloudflare secret spends one.
 Day 1 is the bootstrap, LB0 and LB1; LB2 and LB3 land on day 2. Local tests
 are green before every `orun pr open`.
 
-## LB0 — the spec
+## LB0 — the spec ✅
 
 This doc set, merged to `main` and attached to the epic with `orun spec push`.
 
@@ -19,7 +19,7 @@ This doc set, merged to `main` and attached to the epic with `orun spec push`.
 - the five documents are on `main`
 - `orun spec list --epic leakbook-refrigerant-log` shows them
 
-## LB1 — the phone-first log
+## LB1 — the phone-first log ✅
 
 The register and the log, reachable from a QR label. Migration
 `200_leak_core` (`leak_sites`, `leak_appliances`, `leak_service_events` —

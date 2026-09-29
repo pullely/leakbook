@@ -102,6 +102,13 @@ function mapEvent(row: Row): ServiceEvent {
     voidReason: str(row.void_reason),
     voidedBy: str(row.voided_by),
     createdAt: row.created_at as string,
+    leakOz: row.leak_oz === null || row.leak_oz === undefined ? Number(row.added_oz) - Number(row.returned_oz) : Number(row.leak_oz),
+    rateMethod: str(row.rate_method),
+    rateDays: num(row.rate_days),
+    leakRateBp: num(row.leak_rate_bp),
+    regime: str(row.regime),
+    thresholdPct: num(row.threshold_pct),
+    exceedsThreshold: num(row.exceeds_threshold) === null ? null : num(row.exceeds_threshold) === 1,
   };
 }
 
@@ -131,7 +138,8 @@ const APPLIANCE_SELECT = `SELECT a.id, a.org_id, a.site_id, a.name, a.location, 
 
 const EVENT_COLUMNS = `id, org_id, site_id, appliance_id, service_date, kind, technician_name, component,
   work_performed, added_oz, recovered_oz, returned_oz, full_charge_oz, verification_passed, notes,
-  logged_by, logged_via, voided_at, void_reason, voided_by, created_at`;
+  logged_by, logged_via, voided_at, void_reason, voided_by, created_at,
+  leak_oz, rate_method, rate_days, leak_rate_bp, regime, threshold_pct, exceeds_threshold`;
 
 export function createLeakRepository(executor: SqlExecutor): LeakRepository {
   async function one(sql: string, params: unknown[]): Promise<Row | null> {
@@ -289,8 +297,10 @@ export function createLeakRepository(executor: SqlExecutor): LeakRepository {
         `INSERT INTO leak_service_events
            (id, org_id, site_id, appliance_id, service_date, kind, technician_name, component,
             work_performed, added_oz, recovered_oz, returned_oz, full_charge_oz, verification_passed,
-            notes, logged_by, logged_via, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            notes, logged_by, logged_via, created_at,
+            leak_oz, rate_method, rate_days, leak_rate_bp, regime, threshold_pct, exceeds_threshold)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+                 $19, $20, $21, $22, $23, $24, $25)
          RETURNING ${EVENT_COLUMNS}`,
         [
           input.id,
@@ -311,6 +321,13 @@ export function createLeakRepository(executor: SqlExecutor): LeakRepository {
           input.loggedBy,
           input.loggedVia,
           input.now,
+          input.leakOz,
+          input.rateMethod,
+          input.rateDays,
+          input.leakRateBp,
+          input.regime,
+          input.thresholdPct,
+          input.exceedsThreshold === null ? null : input.exceedsThreshold ? 1 : 0,
         ],
       );
       if (!row) throw new Error("leak: service event insert returned no row");
@@ -341,6 +358,43 @@ export function createLeakRepository(executor: SqlExecutor): LeakRepository {
         params,
       );
       return result.rows.map(mapEvent);
+    },
+
+    async listEventsInLogOrder(orgId, applianceId, since) {
+      const params: unknown[] = [orgId, applianceId];
+      let where = "org_id = $1 AND appliance_id = $2";
+      if (since) {
+        params.push(since);
+        where += " AND service_date >= $3";
+      }
+      const result = await executor.execute<Row>(
+        `SELECT ${EVENT_COLUMNS} FROM leak_service_events WHERE ${where}
+          ORDER BY service_date ASC, created_at ASC, id ASC
+          LIMIT 20000`,
+        params,
+      );
+      return result.rows.map(mapEvent);
+    },
+
+    async siteHasCalculatedRate(orgId, siteId) {
+      const row = await one(
+        `SELECT id FROM leak_service_events
+          WHERE org_id = $1 AND site_id = $2 AND leak_rate_bp IS NOT NULL AND voided_at IS NULL
+          LIMIT 1`,
+        [orgId, siteId],
+      );
+      return row !== null;
+    },
+
+    async latestRatedEvent(orgId, applianceId) {
+      const row = await one(
+        `SELECT ${EVENT_COLUMNS} FROM leak_service_events
+          WHERE org_id = $1 AND appliance_id = $2 AND leak_rate_bp IS NOT NULL AND voided_at IS NULL
+          ORDER BY service_date DESC, created_at DESC, id DESC
+          LIMIT 1`,
+        [orgId, applianceId],
+      );
+      return row ? mapEvent(row) : null;
     },
 
     async voidServiceEvent(orgId, applianceId, eventId, reason, voidedBy, now) {

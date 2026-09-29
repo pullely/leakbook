@@ -73,7 +73,7 @@ function Label({ token }: { token: string }) {
       </div>
     );
   }
-  const { appliance, site, events } = q.data;
+  const { appliance, site, events, rateHistory } = q.data;
 
   return (
     <>
@@ -96,6 +96,7 @@ function Label({ token }: { token: string }) {
           <h2 className="mb-3 text-base font-semibold">Log this visit</h2>
           <LogForm
             compact
+            preview={{ appliance, method: site.leakRateMethod, history: rateHistory ?? [] }}
             onSubmit={async (body) => {
               const r = await wrap(() => client.leak.logEventByQr(token, body));
               if (r.ok) {

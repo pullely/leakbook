@@ -11,7 +11,7 @@ import { createTimings } from "@saas/contracts/timing";
 // org route; the worker runs membership + policy itself.
 
 const LEAK_ORG_RE =
-  /^\/v1\/organizations\/[^/]+\/(?:sites(?:\/[^/]+(?:\/appliances)?)?|appliances\/[^/]+(?:\/(?:qr-token|events(?:\/[^/]+\/void)?))?)$/;
+  /^\/v1\/organizations\/[^/]+\/(?:sites(?:\/[^/]+(?:\/appliances)?)?|appliances\/[^/]+(?:\/(?:qr-token|leak-rate|events(?:\/[^/]+\/void)?))?)$/;
 const LEAK_QR_RE = /^\/v1\/qr\/[^/]+(?:\/events)?$/;
 
 const FORWARDED_HEADERS = ["content-type", "content-length", "traceparent", "idempotency-key"];
