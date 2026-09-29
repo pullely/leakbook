@@ -1,4 +1,5 @@
 import type {
+  LeakRateResponse,
   ApplianceResponse,
   CreateApplianceRequest,
   CreateLeakSiteRequest,
@@ -129,6 +130,14 @@ export class LeakClient {
   ): Promise<ServiceEventResponse> {
     return this.transport.request<ServiceEventResponse>(
       { method: "POST", path: `${appliance(orgId, applianceId)}/events/${encodeURIComponent(eventId)}/void`, body },
+      opts,
+    );
+  }
+
+  /** GET /v1/organizations/:orgId/appliances/:applianceId/leak-rate — applicability, latest rate, chronic flag (LB2). */
+  getLeakRate(orgId: string, applianceId: string, opts: RequestOptions = {}): Promise<LeakRateResponse> {
+    return this.transport.request<LeakRateResponse>(
+      { method: "GET", path: `${appliance(orgId, applianceId)}/leak-rate` },
       opts,
     );
   }

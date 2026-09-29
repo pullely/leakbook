@@ -21,6 +21,7 @@ import {
 import { QrLabel, labelUrl } from "@/components/leak/qr-label";
 import { LogForm } from "@/components/leak/log-form";
 import { EventList, toFormResult } from "@/components/leak/event-list";
+import { ThresholdLine } from "@/components/leak/rate";
 
 export default function AppliancePage() {
   const params = useParams<{ orgSlug: string; applianceId: string }>();
@@ -40,7 +41,7 @@ function Inner({ orgId, orgSlug, applianceId }: { orgId: string; orgSlug: string
 
   if (q.loading) return <Skeleton className="h-40 w-full" />;
   if (q.error || !q.data) return <p className="text-sm text-destructive">{q.error?.message ?? "Unit not found"}</p>;
-  const { appliance, site, events } = q.data;
+  const { appliance, site, events, rateHistory } = q.data;
 
   async function rotate() {
     if (!window.confirm("Replace this unit's label? The printed label stops working at once.")) return;
@@ -91,6 +92,9 @@ function Inner({ orgId, orgSlug, applianceId }: { orgId: string; orgSlug: string
               <Fact label="Serial" value={appliance.serialNumber || "—"} />
               <Fact label="Last service" value={appliance.lastServiceDate ?? "—"} />
             </dl>
+            <div className="mt-4 border-t pt-3">
+              <ThresholdLine appliance={appliance} method={site.leakRateMethod} />
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -123,6 +127,7 @@ function Inner({ orgId, orgSlug, applianceId }: { orgId: string; orgSlug: string
           </CardHeader>
           <CardContent>
             <LogForm
+              preview={{ appliance, method: site.leakRateMethod, history: rateHistory ?? [] }}
               onSubmit={async (body) => {
                 const r = await wrap(() => client.leak.logEvent(orgId, applianceId, { ...body, loggedVia: "console" }));
                 if (r.ok) {
