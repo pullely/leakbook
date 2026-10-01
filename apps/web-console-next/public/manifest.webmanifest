@@ -1,11 +1,19 @@
 {
   "name": "Leakbook Console",
   "short_name": "Leakbook",
-  "description": "Control plane for your projects, environments, and entitlements.",
+  "description": "A phone-first refrigerant log for commercial cooling systems, with automatic leak-rate maths and 30-day repair clocks",
   "start_url": "/orgs",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
-  "orientation": "portrait-primary"
+  "background_color": "#0c0f13",
+  "theme_color": "#0c0f13",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }
